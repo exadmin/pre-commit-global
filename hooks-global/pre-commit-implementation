@@ -38,5 +38,5 @@ elif [ -e "$LOCAL_HOOK" ]; then
   echo -e "${PREFIX} Executing Local Hooks"
   "$LOCAL_HOOK" "$@" || exit $? # Run local hook and exit with its status
 else
-  echo -e "${PREFIX} Nothing was called as no '.pre-commit-config.yml' file was found"
+  echo -e "${PREFIX} File '.pre-commit-config.yml' was found, skipping pre-commit call"
 fi
