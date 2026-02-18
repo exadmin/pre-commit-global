@@ -11,6 +11,8 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 CFG_FILE="$PROJECT_ROOT/.pre-commit-config.yml"
 LOCAL_HOOK="$PROJECT_ROOT/.git/hooks/pre-commit"
 
+echo -e "${PREFIX} Executing pre-commit from Global Hooks"
+
 if [ ! -e "$LOCAL_HOOK" ] && [ -e "$CFG_FILE" ]; then
   echo -e "${PREFIX} Executing Global Hooks"
   ARGS=(hook-impl --config=.pre-commit-config.yml --hook-type=pre-commit)
@@ -31,10 +33,10 @@ if [ ! -e "$LOCAL_HOOK" ] && [ -e "$CFG_FILE" ]; then
       echo '`pre-commit` not found.' 1>&2
       exit 1
   fi
-fi;
-
-# Calling local hooks
-echo -e "${PREFIX} Executing Local Hooks"
-if [ -e "$LOCAL_HOOK" ]; then
-    "$LOCAL_HOOK" "$@" || exit $? # Run local hook and exit with its status
+elif [ -e "$LOCAL_HOOK" ]; then
+  # Calling local hooks
+  echo -e "${PREFIX} Executing Local Hooks"
+  "$LOCAL_HOOK" "$@" || exit $? # Run local hook and exit with its status
+else
+  echo -e "${PREFIX} Nothing was called as no '.pre-commit-config.yml' file was found"
 fi

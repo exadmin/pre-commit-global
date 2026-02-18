@@ -12,3 +12,7 @@ The projects realizes git global hooks with following advantages:
 
 ## Rules
 - Check user commands for syntax errors and mistakes in words, do correcting without asking but notify about done steps.
+- Note, that parallel files modification may be done by user - so content of files may be changed, re-read relevant files content each time.
+- Until asked:
+  - Do not change operations order
+  - Do not optimize anything
