@@ -8,16 +8,15 @@ PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
 # Calling global hooks in case configuration file is found by ".qubership/global-pre-commit-config.yaml" file
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-CFG_FILE="$PROJECT_ROOT/.pre-commit-config.yaml"
+CFG_FILE="$PROJECT_ROOT/.pre-commit-config.yml"
+LOCAL_HOOK="$PROJECT_ROOT/.git/hooks/pre-commit"
 
-if [ -f "$CFG_FILE" ]; then
+if [ ! -e "$LOCAL_HOOK" ] && [ -e "$CFG_FILE" ]; then
   echo -e "${PREFIX} Executing Global Hooks"
-  ARGS=(hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit)
+  ARGS=(hook-impl --config=.pre-commit-config.yml --hook-type=pre-commit)
   HERE="$(cd "$(dirname "$0")" && pwd)"
   ARGS+=(--hook-dir "$HERE" -- "$@")
   PYTHON=$(command -v python)
-
-  # echo "Arguments are [" "${ARGS[@]}" "]"
 
   if [ -x "$PYTHON" ]; then
       "$PYTHON" -mpre_commit "${ARGS[@]}"
@@ -36,8 +35,6 @@ fi;
 
 # Calling local hooks
 echo -e "${PREFIX} Executing Local Hooks"
-LOCAL_HOOK="$PROJECT_ROOT/.git/hooks/pre-commit"
-if [ -e "$LOCAL_HOOK" ] && [ -x "$LOCAL_HOOK" ]; then
+if [ -e "$LOCAL_HOOK" ]; then
     "$LOCAL_HOOK" "$@" || exit $? # Run local hook and exit with its status
 fi
-
