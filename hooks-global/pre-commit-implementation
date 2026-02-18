@@ -8,11 +8,11 @@ PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
 # Calling global hooks in case configuration file is found by ".qubership/global-pre-commit-config.yaml" file
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-CFG_FILE="$PROJECT_ROOT/.qubership/global-pre-commit-config.yaml"
+CFG_FILE="$PROJECT_ROOT/.pre-commit-config.yaml"
 
 if [ -f "$CFG_FILE" ]; then
   echo -e "${PREFIX} Executing Global Hooks"
-  ARGS=(hook-impl --config=.qubership/global-pre-commit-config.yaml --hook-type=pre-commit)
+  ARGS=(hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit)
   HERE="$(cd "$(dirname "$0")" && pwd)"
   ARGS+=(--hook-dir "$HERE" -- "$@")
   PYTHON=$(command -v python)
