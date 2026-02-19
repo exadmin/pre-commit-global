@@ -15,7 +15,7 @@ echo -e "${PREFIX} Executing pre-commit from Global Hooks"
 
 if [ ! -e "$LOCAL_HOOK" ] && [ -e "$CFG_FILE" ]; then
   echo -e "${PREFIX} Executing Global Hooks"
-  ARGS=(hook-impl --config=.pre-commit-config.yml --hook-type=pre-commit)
+  ARGS=(hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit)
   HERE="$(cd "$(dirname "$0")" && pwd)"
   ARGS+=(--hook-dir "$HERE" -- "$@")
   PYTHON=$(command -v python)
