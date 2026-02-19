@@ -8,7 +8,7 @@ PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
 # Calling global hooks in case configuration file is found by ".qubership/global-pre-commit-config.yaml" file
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-CFG_FILE="$PROJECT_ROOT/.pre-commit-config.yml"
+CFG_FILE="$PROJECT_ROOT/.pre-commit-config.yaml"
 LOCAL_HOOK="$PROJECT_ROOT/.git/hooks/pre-commit"
 
 echo -e "${PREFIX} Executing pre-commit from Global Hooks"
@@ -38,5 +38,5 @@ elif [ -e "$LOCAL_HOOK" ]; then
   echo -e "${PREFIX} Executing Local Hooks"
   "$LOCAL_HOOK" "$@" || exit $? # Run local hook and exit with its status
 else
-  echo -e "${PREFIX} File '.pre-commit-config.yml' was found, skipping pre-commit call"
+  echo -e "${PREFIX} File '${CFG_FILE}' was found, skipping pre-commit call"
 fi
