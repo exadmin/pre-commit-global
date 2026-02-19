@@ -1,25 +1,31 @@
 # About
-Contains Git-hook-based scripts to be registered as a global hooks - such approach may be useful for teams who work 
+The main aim of this project is to call "https://pre-commit.com/" hooks without necessity of calling installation of the 
+framework for each cloned repository.
+
+The approach is based on global Git-hooks scripts. Generally it may be useful for teams who work 
 with a lot of repositories with similar rules to perform checks on commit.
 
 The logic of solution is following:
 1. Global hooks are registered once for the Git application
 2. Each time user commits - Global Hooks are triggered:
    1. First of all online updates are checked for the Global Hooks
-   2. If working repository contains "./qubership/global-pre-commit-config.yaml" file then "pre-commit" framework 
+   2. If working repository contains ".pre-commit-config.yaml" file then "pre-commit" framework 
    will be started using this configuration.
    3. In case no errors happened on the previous step (or no configuration file is found) then local hook ".git/pre-commit" will be called if exists.
+4. If other type (then pre-commit) of git-event is happened and local hook-file exists - then it will be called.
 
 # How to install
 ## Prerequisites
 ### Git
 Git to be installed from https://git-scm.com/install/
-No Git global hook paths are setup yet, check "core.hooksPath" property value with
+Ensure that no Git global hook paths are setup yet, check "core.hooksPath" property value with
 ```shell
 git config --global core.hooksPath
 # or
 git config --global --list
 ```
+If you have global hooks installed - then you have to decide what to do: either you don't need this functionality or 
+you can proxify it somehow.
 
 ### Python
 Python to be installed from https://www.python.org/downloads/, currently tested version is 3.14.2.
