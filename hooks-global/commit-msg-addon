@@ -6,19 +6,26 @@ ORANGE='\033[0;33m'
 NC='\033[0m' # No Color (reset)
 PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
-HOOK_NAME="$(basename "$0")"
-LOCAL_HOOK="./.git/hooks/$HOOK_NAME"
+REPO_PATH="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$REPO_PATH" ]; then
+  REPO_PATH="$PWD"
+fi
+LOCAL_HOOK="${REPO_PATH}/.git/hooks/commit-msg"
 
 if [ -e "$LOCAL_HOOK" ]; then
   echo -e "${PREFIX} Local hook is defining - call it"
   sh "$LOCAL_HOOK" "$@"
 else
   echo -e "${PREFIX} Calling CyberFerret checks"
-  if [ -f "./.qubership/grand-report.json" ]; then
+  if [ -f "${REPO_PATH}/.qubership/grand-report.json" ]; then
       if [ -n "$1" ] && grep -q "@skip_cf" "$1"; then
           echo -e "${PREFIX} ${ORANGE}Skip CyberFerret checks due to @skip_cf in commit message${NC}"
       else
-          java --version
+          if [ -z "$CYBER_FERRET_PATH" ]; then
+              echo -e "${PREFIX} ${ORANGE}Skip CyberFerret checks: CYBER_FERRET_PATH is not set${NC}"
+              exit 1
+          fi
+          java -cp "${CYBER_FERRET_PATH}/cyberferret.jar" com.github.exadmin.cyberferret.CyberFerretCLI "${REPO_PATH}"
       fi
   fi
 fi
