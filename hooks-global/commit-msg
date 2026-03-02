@@ -1,8 +1,46 @@
 #!/bin/sh
+#!/usr/bin/env bash
+# This file just calls "git pull" (if required) for the global hooks, then delegates logic into pre-commit-addon.
+GLOBAL_HOOKS_PATH=$(git config --global core.hooksPath)
 
-HOOK_NAME="$(basename "$0")"
-LOCAL_HOOK="./.git/hooks/$HOOK_NAME"
+# Define color codes
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color (reset)
+PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
-if [ -e "$LOCAL_HOOK" ]; then
-    sh "$LOCAL_HOOK" "$@"
+# Check if GLOBAL_HOOKS_PATH is empty
+if [ -z "$GLOBAL_HOOKS_PATH" ]; then
+    echo "${PREFIX} Error: Global hooks path is not configured."
+    echo "${PREFIX} Please set up global hooks using: git config --global core.hooksPath <path>"
+    echo "${PREFIX} Or follow the installation instructions in the README.md from https://github.com/exadmin/pre-commit-global"
+    exit 1
 fi
+
+# Call GlobalHooks git update if 4 hours passed since last update
+TIMESTAMP_FILE="$GLOBAL_HOOKS_PATH/.last_pull_timestamp"
+CURRENT_TIME=$(date +%s)
+PULL_INTERVAL=14400  # 4 hours in seconds
+
+if [ -f "$TIMESTAMP_FILE" ]; then
+    LAST_PULL_TIME=$(cat "$TIMESTAMP_FILE")
+    TIME_DIFF=$((CURRENT_TIME - LAST_PULL_TIME))
+
+    if [ $TIME_DIFF -lt $PULL_INTERVAL ]; then
+        # echo "Skipping git pull - last pull was less than 30 minutes ago"
+        SKIP_PULL=true
+    fi
+fi
+
+# Run git pull if required
+if [ -z "$SKIP_PULL" ]; then
+    # todo: support case when network service is not available
+    if git -C "$GLOBAL_HOOKS_PATH" pull; then
+        echo -e "${PREFIX} Global hooks updated successfully"
+        echo "$CURRENT_TIME" > "$TIMESTAMP_FILE"
+    else
+        echo -e "${PREFIX} Warning: Failed to update global hooks"
+    fi
+fi
+
+# START RUNNING GLOBAL HOOK MAIN LOGIC
+$GLOBAL_HOOKS_PATH/commit-msg-addon "$@"

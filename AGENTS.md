@@ -1,13 +1,13 @@
 # AGENTS Guidelines for this repository
 
 ## Overall description
-The projects realizes git global hooks with following advantages:
+The project implements git global hooks with following advantages:
 - regular auto update of hooks implementation
 - delegation to local git-hooks if exist
-- main focus on pre-commit phase
+- main focus on commit-msg phase
 
 ## Project Structure
-- '.idea' (may be absent) - this is temporary folder which can be created by IntelliJ IDEA IDE, ignore it in any operations.
+- '.idea' (may absent) - this is temporary folder which can be created by IntelliJ IDEA IDE, ignore it in any operations.
 - 'hooks-global' - contains global hooks bash-scripts to be called during git repositories lifecycle
 
 ## Rules

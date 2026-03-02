@@ -1,0 +1,9 @@
+#!/bin/sh
+#!/usr/bin/env bash
+
+HOOK_NAME="$(basename "$0")"
+LOCAL_HOOK="./.git/hooks/$HOOK_NAME"
+
+if [ -e "$LOCAL_HOOK" ]; then
+  sh "$LOCAL_HOOK" "$@"
+fi

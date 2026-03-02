@@ -1,6 +1,6 @@
 #!/bin/sh
 #!/usr/bin/env bash
-# This file just calls "git pull" (if required) for the global hooks, then delegates logic into pre-commit-implementation.
+# This file just calls "git pull" (if required) for the global hooks, then delegates logic into pre-commit-addon.
 GLOBAL_HOOKS_PATH=$(git config --global core.hooksPath)
 
 # Define color codes
@@ -12,7 +12,7 @@ PREFIX="${CYAN}[QUBERSHIP]${NC}"
 if [ -z "$GLOBAL_HOOKS_PATH" ]; then
     echo "${PREFIX} Error: Global hooks path is not configured."
     echo "${PREFIX} Please set up global hooks using: git config --global core.hooksPath <path>"
-    echo "${PREFIX} Or follow the installation instructions in the README.md from  https://github.com/exadmin/qubership-pre-commit-proto.git"
+    echo "${PREFIX} Or follow the installation instructions in the README.md from https://github.com/exadmin/pre-commit-global"
     exit 1
 fi
 
@@ -43,4 +43,4 @@ if [ -z "$SKIP_PULL" ]; then
 fi
 
 # START RUNNING GLOBAL HOOK MAIN LOGIC
-$GLOBAL_HOOKS_PATH/pre-commit-implementation "$@"
+$GLOBAL_HOOKS_PATH/pre-commit-addon "$@"

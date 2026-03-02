@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Define color codes
+CYAN='\033[0;36m'
+ORANGE='\033[0;33m'
+NC='\033[0m' # No Color (reset)
+PREFIX="${CYAN}[QUBERSHIP]${NC}"
+
+HOOK_NAME="$(basename "$0")"
+LOCAL_HOOK="./.git/hooks/$HOOK_NAME"
+
+if [ -e "$LOCAL_HOOK" ]; then
+  echo -e "${PREFIX} Local hook is defining - call it"
+  sh "$LOCAL_HOOK" "$@"
+else
+  echo -e "${PREFIX} Calling CyberFerret checks"
+  if [ -f "./.qubership/grand-report.json" ]; then
+      if [ -n "$1" ] && grep -q "@skip_cf" "$1"; then
+          echo -e "${PREFIX} ${ORANGE}Skip CyberFerret checks due to @skip_cf in commit message${NC}"
+      else
+          java --version
+      fi
+  fi
+fi
