@@ -21,11 +21,18 @@ else
       if [ -n "$1" ] && grep -q "@skip_cf" "$1"; then
           echo -e "${PREFIX} ${ORANGE}Skip CyberFerret checks due to @skip_cf in commit message${NC}"
       else
-          if [ -z "$CYBER_FERRET_PATH" ]; then
-              echo -e "${PREFIX} ${ORANGE}Skip CyberFerret checks: CYBER_FERRET_PATH is not set${NC}"
+          if [ -n "$CYBER_FERRET_PATH" ]; then
+              JAR_PATH="${CYBER_FERRET_PATH}/target/cyberferret.jar"
+          else
+              GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
+              JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret.jar"
+          fi
+          if [ ! -f "$JAR_PATH" ]; then
+              echo -e "${PREFIX} ${ORANGE}'cyberferret.jar' is not found by path ${JAR_PATH}. Compile it first, probably using 'mvn clean package assembly:single' but read README.md first.${NC}"
               exit 1
           fi
-          java -cp "${CYBER_FERRET_PATH}/cyberferret.jar" com.github.exadmin.cyberferret.CyberFerretCLI "${REPO_PATH}"
+          echo -e "${PREFIX} Using $JAR_PATH"
+          java -cp "$JAR_PATH" com.github.exadmin.cyberferret.CyberFerretCLI "${REPO_PATH}"
       fi
   fi
 fi
