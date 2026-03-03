@@ -17,10 +17,10 @@ if [ -e "$LOCAL_HOOK" ]; then
   sh "$LOCAL_HOOK" "$@"
   exit $?
 else
-  echo -e "${PREFIX} Calling CyberFerret checks"
+  echo -e "${PREFIX} Calling CyberFerret checks for ${REPO_PATH}"
   if [ -f "${REPO_PATH}/.qubership/grand-report.json" ]; then
       if [ -n "$1" ] && grep -q "@skip_cf" "$1"; then
-          echo -e "${PREFIX} ${ORANGE}Skip CyberFerret checks due to @skip_cf in commit message${NC}"
+          echo -e "${PREFIX} ${ORANGE} Skip CyberFerret checks due to @skip_cf in commit message${NC}"
       else
           if [ -n "$CYBER_FERRET_PATH" ]; then
               JAR_PATH="${CYBER_FERRET_PATH}/cyberferret.jar"
@@ -29,12 +29,14 @@ else
               JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret.jar"
           fi
           if [ ! -f "$JAR_PATH" ]; then
-              echo -e "${PREFIX} ${ORANGE}'cyberferret.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret.${NC}"
+              echo -e "${PREFIX} ${ORANGE} 'cyberferret.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret.${NC}"
               exit 1
           fi
           echo -e "${PREFIX} Using $JAR_PATH"
           java -cp "$JAR_PATH" com.github.exadmin.cyberferret.CyberFerretCLI "${REPO_PATH}"
           exit $?
       fi
+  else
+      echo -e "${PREFIX} ${ORANGE} File '.qubership/grand-report.json' not found in ${REPO_PATH}. Skipping CyberFerret checks.${NC}"
   fi
 fi
