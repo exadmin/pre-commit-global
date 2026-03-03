@@ -43,4 +43,5 @@ if [ -z "$SKIP_PULL" ]; then
 fi
 
 # START RUNNING GLOBAL HOOK MAIN LOGIC
-$GLOBAL_HOOKS_PATH/commit-msg-addon "$@"
+"$GLOBAL_HOOKS_PATH/commit-msg-addon" "$@"
+exit $?

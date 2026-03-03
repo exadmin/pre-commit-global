@@ -15,7 +15,12 @@ The logic of solution is following:
 4. If other type (then pre-commit) of git-event is happened and local hook-file exists - then it will be called.
 
 # How to install
-## Prerequisites
+
+## Prerequisites - to be done once per working environment
+### Java
+Install Open- or Oracle Java Runtime Environment.
+Tested on Oracle JDK SE v.25
+
 ### Git
 Git to be installed from https://git-scm.com/install/
 Ensure that no Git global hook paths are setup yet, check "core.hooksPath" property value with
@@ -27,22 +32,15 @@ git config --global --list
 If you have global hooks installed - then you have to decide what to do: either you don't need this functionality or 
 you can proxify it somehow.
 
-### Python
-Python to be installed from https://www.python.org/downloads/, currently tested version is 3.14.2.
-Solution is based on using [pre-commit framework](https://pre-commit.com/) which is python-based.
+## CyberFerret password
+Setup System Environment variable with password value to be used to decrypt dictionary with signatures to search
+Env Variable name is 'CYBER_FERRET_PASSWORD'
+Password to be obtained from the owner of signatures dictionaries
 
-### Pre-commit
-Pre-commit framework to be installed from using instructions from https://pre-commit.com/
-```shell
-pip install pre-commit
-```
-
-After installation check pre-commit version by
-```shell
-pre-commit --version
-```
-Currently tested with 4.5.1
-
+## Prerequisites - to be done for each repository
+To trigger CyberFerret check on pre-commit it's required for target repository to have special file "\.qubership\grand-report.json".
+This file originally is used by CyberFerret application to keep ignores for false-positive signatures.
+So, you can just put empty JSON file here - to be just marker for git-hooks to trigger.
 
 ## Install global hooks
 Note, that downloaded repository will be registered in the Git global configuration, 
