@@ -6,6 +6,9 @@ ORANGE='\033[0;33m'
 NC='\033[0m' # No Color (reset)
 PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
+
+STAGED_FILES=$(git diff HEAD --name-only | paste -sd ',')
+
 REPO_PATH="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -z "$REPO_PATH" ]; then
   REPO_PATH="$PWD"
@@ -33,7 +36,7 @@ else
               exit 1
           fi
           echo -e "${PREFIX} Using $JAR_PATH"
-          java -cp "$JAR_PATH" com.github.exadmin.cyberferret.CyberFerretCLI "${REPO_PATH}"
+          java -cp "$JAR_PATH" com.github.exadmin.cyberferret.CyberFerretCLI "${REPO_PATH} \"$STAGED_FILES\""
           exit $?
       fi
   else
