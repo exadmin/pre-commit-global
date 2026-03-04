@@ -1,11 +1,21 @@
 # How to test the functionality
 
+## Generic rules
+
+## Rules for failed steps
+Do not continue test-scenario if some step is failed.
+Print out all error messages and logs you have for the failed step, do not trimm or edit them.
+Provide your vision of rootcause for the failed steps.
+
+## Test case
+0. Check if "CYBER_FERRET_PASSWORD" environment variable is set and not empty
 1. Ask administrator/user where to create new temp folder
-2. Go to temp folder
-3. Ensure the working directory is the temp repository (run `cd <temp_repo>` and execute all commands only there)
+2. Go to temp folder and create new folder "pre-commit-global-qa-X" where X is a new number which guarantees folder uniqueness. If X already exsits - use another number by increasing it by 1. 
+3. Go to new folder "pre-commit-global-qa-X", all next operations do being inside that folder.
 4. Create temp git-repository there
+5. Create empty initial commit to ensure `HEAD` exists: `git commit --allow-empty -m "init"`
 5. Add following files to the repository:
-   * echo "{}" > ./qubership/grand-report.json
+   * echo "{}" > .qubership/grand-report.json
 6. Create following test files in the repository:
    * echo "one" > one.file
    * echo "two" > "two two.file"
