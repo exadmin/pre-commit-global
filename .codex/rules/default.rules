@@ -1,0 +1,40 @@
+# .codex/rules/default.rules
+# Формат: Starlark. Правила сравниваются с argv (как execvp).
+
+prefix_rule(
+    pattern = ["git", "init"],
+    decision = "allow",
+    match = ["git init"],
+)
+
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    match = ["git status"],
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    match = ["git diff"],
+)
+
+# Разрешает любые варианты commit (с -m, --amend и т.д.)
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "allow",
+    match = ["git commit -m msg", "git commit --amend -m msg"],
+)
+
+prefix_rule(
+    pattern = ["mkdir"],
+    decision = "allow",
+    match = ["mkdir a", "mkdir -p a/b"],
+)
+
+prefix_rule(
+    pattern = ["bash", "-lc"],
+    decision = "prompt",
+    justification = "Скрипты с редиректами не дробятся; проверяй содержимое команды вручную.",
+    match = ['bash -lc "echo hello > file.txt"'],
+)

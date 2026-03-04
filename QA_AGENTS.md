@@ -4,8 +4,9 @@
 
 ## Rules for failed steps
 Do not continue test-scenario if some step is failed.
-Print out all error messages and logs you have for the failed step, do not trimm or edit them.
-Provide your vision of rootcause for the failed steps.
+Print full command line with all arguments which was executed.
+Print out all error messages and logs you have for the failed step, do not trim or edit them.
+Provide your vision of root cause for the failed steps.
 
 ## Test case
 0. Check if "CYBER_FERRET_PASSWORD" environment variable is set and not empty
