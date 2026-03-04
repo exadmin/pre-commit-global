@@ -26,7 +26,7 @@ Provide your vision of root cause for the failed steps.
 8. Do commit: git commit -m "fake commit"
 9. Ensure commited is passed successfully
 10. Now create following test files in the repository:
-   * echo "pat_xxx" > secret.file
+   * echo "ghp_xxxxxxxxyyyyyyyyQrStUvWxYz0123456789" > secret.file
 11. Add file into git staged files
 12. Do commit: git commit -m "fake2 commit"
 13. Ensure commit is failed
