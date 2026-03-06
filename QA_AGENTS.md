@@ -10,10 +10,10 @@ Provide your vision of root cause for the failed steps.
 
 ## Test case
 0. Check if "CYBER_FERRET_PASSWORD" environment variable is set and not empty
-1. Ask administrator/user where to create new temp folder
-2. Go to temp folder and create new folder "pre-commit-global-qa-X" where X is a new number which guarantees folder uniqueness. If X already exsits - use another number by increasing it by 1. 
-3. Go to new folder "pre-commit-global-qa-X", all next operations do being inside that folder.
-4. Create temp git-repository there
+1. Go to "/tmp" folder
+2. Create new folder "pre-commit-global-qa-?" where ? is a new number which guarantees folder uniqueness. If ? already exists - use another number by increasing it by 1. 
+3. Go to new folder "pre-commit-global-qa-?", let's call it "working folder"
+4. Initialize git-repository there
 5. Create empty initial commit to ensure `HEAD` exists: `git commit --allow-empty -m "init"`
 5. Add following files to the repository:
    * echo "{}" > .qubership/grand-report.json
@@ -32,3 +32,4 @@ Provide your vision of root cause for the failed steps.
 13. Ensure commit is failed
 14. Do commit: git commit -m "fake2 commit, @skip_cf"
 15. Ensure commit is passed successfully
+16. Ensure no files like "dictionary-latest-cache.*" exists in the working folder.
