@@ -1,14 +1,15 @@
 # How to test the functionality
 
 ## Generic rules
+There is list of test-steps which you need execute one by one.
+If step is failed unexpectedly - Do not continue test-scenario if some step is failed
+If step is failed unexpectedly - print full command line with all arguments which was executed.
+If step is failed unexpectedly - print out all error messages and logs you have for the failed step, do not trim or edit them.
+If step is failed unexpectedly - provide your vision of root cause for the failed steps.
 
-## Rules for unexpectedly only failed steps
-Do not continue test-scenario if some step is failed
-Print full command line with all arguments which was executed.
-Print out all error messages and logs you have for the failed step, do not trim or edit them.
-Provide your vision of root cause for the failed steps.
+## Test cases
 
-## Test case
+### Preparing for testing
 0. Check if "CYBER_FERRET_PASSWORD" environment variable is set and not empty
 1. Go to "/tmp" folder
 2. Create new folder "pre-commit-global-qa-?" where ? is a new number which guarantees folder uniqueness. If ? already exists - use another number by increasing it by 1. 
@@ -17,19 +18,37 @@ Provide your vision of root cause for the failed steps.
 5. Create empty initial commit to ensure `HEAD` exists: `git commit --allow-empty -m "init"`
 5. Add following files to the repository:
    * echo "{}" > .qubership/grand-report.json
-6. Create following test files in the repository:
+
+### Test-1: Sunny-day scenario - good files are commited successfully
+1. Create following test files in the repository:
    * echo "one" > one.file
    * echo "two" > "two two.file"
    * echo "three" > subfolder/three.file
    * echo "four" > "subfolder with spaces/four with space.file"
-7. Add all these files into git staged files
-8. Do commit: git commit -m "fake commit"
-9. Ensure commited is passed successfully
-10. Now create following test files in the repository:
+2. Add all these files into git staged files
+3. Do commit: git commit -m "fake commit"
+4. Ensure commit is passed successfully
+
+### Test-2: There are bad signatures in the files - commit must not pass
+1. Now create following test files in the repository:
    * echo "ghp_xxxxxxxxyyyyyyyyQrStUvWxYz0123456789" > secret.file
-11. Add file into git staged files
-12. Do commit: git commit -m "fake2 commit"
-13. Ensure commit is failed
-14. Do commit: git commit -m "fake2 commit, @skip_cf"
-15. Ensure commit is passed successfully
-16. Ensure no files like "dictionary-latest-cache.*" exists in the working folder.
+2. Add file into git staged files
+3. Do commit: git commit -m "fake2 commit"
+4. Ensure commit is failed
+
+### Test-3: There should be ability to bypass checks in controlled way
+1. Do commit: git commit -m "fake2 commit, @skip_cf"
+2. Ensure commit is passed successfully
+
+### Test-4: Dictionary files must not appear in the working directory
+1. Ensure no files like "dictionary-latest-cache.*" exists in the working folder.
+
+### Test-5: Only staged files must be processed during commit
+1. Create following files in the repository:
+   * echo "hello" > hello.file
+   * echo "Password1" > pass.txt
+2. Add only "hello.file" into staged files
+3. Do commit: git commit -m "adding hello.file only commit"
+4. Ensure commit is passed successfully
+5. Add pass.txt to staged files
+6. Do commit: git commit -m "adding pass.txt" - this commit must fail.

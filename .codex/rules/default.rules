@@ -34,7 +34,6 @@ prefix_rule(
 
 prefix_rule(
     pattern = ["bash", "-lc"],
-    decision = "prompt",
-    justification = "Скрипты с редиректами не дробятся; проверяй содержимое команды вручную.",
-    match = ['bash -lc "echo hello > file.txt"'],
+    decision = "allow",
+    match = ['bash -lc echo'],
 )
