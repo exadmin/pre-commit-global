@@ -2,8 +2,8 @@
 
 ## Generic rules
 
-## Rules for failed steps
-Do not continue test-scenario if some step is failed.
+## Rules for unexpectedly only failed steps
+Do not continue test-scenario if some step is failed
 Print full command line with all arguments which was executed.
 Print out all error messages and logs you have for the failed step, do not trim or edit them.
 Provide your vision of root cause for the failed steps.
