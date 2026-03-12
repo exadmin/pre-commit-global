@@ -19,7 +19,7 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 5. Add following files to the repository:
    * echo "{}" > .qubership/grand-report.json
 
-### Test-1: Sunny-day scenario - good files are commited successfully
+### Test-1: Sunny-day scenario - good files are committed successfully
 1. Create following test files in the repository:
    * echo "one" > one.file
    * echo "two" > "two two.file"
@@ -52,3 +52,10 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 4. Ensure commit is passed successfully
 5. Add pass.txt to staged files
 6. Do commit: git commit -m "adding pass.txt" - this commit must fail.
+7. Delete pass.txt
+
+### Test-6: Check commiting lot of files
+1. Create 1000 empty *.txt files with long random names (32 chars each) which are put into random hierarchy of folders (folder names are randome too with 32 chars lenght) with deep-level = 5.
+2. Add all files into staged
+3. Call git-commit for them: git commit -m "lot of files"
+4. Ensure every thing is passed successfully

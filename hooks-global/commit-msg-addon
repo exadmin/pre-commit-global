@@ -33,8 +33,10 @@ else
               exit 1
           fi
 
-          STAGED_FILES=$(git diff HEAD --name-only | paste -sd ',')
-          CMD="java -cp \"$JAR_PATH\" com.github.exadmin.cyberferret.CyberFerretCLI \"$REPO_PATH\" \"$STAGED_FILES\""
+          TEMP_FILES_LIST="${REPO_PATH}/.git/cf_files.list"
+          trap 'rm -f "$TEMP_FILES_LIST"' EXIT HUP INT TERM
+          git diff HEAD --name-only > "$TEMP_FILES_LIST"
+          CMD="java -cp \"$JAR_PATH\" com.github.exadmin.cyberferret.CyberFerretCLI \"$REPO_PATH\" \"$TEMP_FILES_LIST\""
           echo -e "${PREFIX} ${CMD}"
           eval "$CMD"
           exit $?
