@@ -34,8 +34,12 @@ else
           fi
 
           TEMP_FILES_LIST="${REPO_PATH}/.git/cf_files.list"
-          trap 'rm -f "$TEMP_FILES_LIST"' EXIT HUP INT TERM
-          git diff HEAD --name-only > "$TEMP_FILES_LIST"
+          # trap 'rm -f "$TEMP_FILES_LIST"' EXIT HUP INT TERM
+          if git rev-parse --verify HEAD >/dev/null 2>&1; then
+              git diff HEAD --name-only > "$TEMP_FILES_LIST"
+          else
+              git diff --cached --name-only > "$TEMP_FILES_LIST"
+          fi
           CMD="java -cp \"$JAR_PATH\" com.github.exadmin.cyberferret.CyberFerretCLI \"$REPO_PATH\" \"$TEMP_FILES_LIST\""
           echo -e "${PREFIX} ${CMD}"
           eval "$CMD"
