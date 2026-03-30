@@ -22,14 +22,10 @@ else
       if [ -n "$1" ] && grep -q "@skip_cf" "$1"; then
           echo -e "${PREFIX} ${ORANGE} Skip CyberFerret checks due to @skip_cf in commit message${NC}"
       else
-          if [ -n "$CYBER_FERRET_PATH" ]; then
-              JAR_PATH="${CYBER_FERRET_PATH}/cyberferret.jar"
-          else
-              GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
-              JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret.jar"
-          fi
+          GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
+          JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret-cli.jar"
           if [ ! -f "$JAR_PATH" ]; then
-              echo -e "${PREFIX} ${ORANGE} 'cyberferret.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret.${NC}"
+              echo -e "${PREFIX} ${ORANGE} 'cyberferret-cli.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret.${NC}"
               exit 1
           fi
 
