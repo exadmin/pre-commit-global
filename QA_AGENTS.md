@@ -40,6 +40,21 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 1. Do commit: git commit -m "fake2 commit, @skip_cf"
 2. Ensure commit is passed successfully
 
+3. Create file "f1.txt" with content inside "hack"
+4. Add created file into git staged files
+5. Do commit: git commit -m "fake2 commit, @cf_ignore"
+6. Ensure commit is passed successfully
+
+7. Create file "f2.txt" with content inside "hack hack"
+8. Add created file into git staged files
+9. Do commit: git commit -m "fake2 commit, @cf_skip"
+10. Ensure commit is passed successfully
+
+11. Create file "f3.txt" with content inside "hack hack hack"
+12. Add created file into git staged files
+13. Do commit: git commit -m "fake2 commit, @ignore_cf"
+14. Ensure commit is passed successfully
+
 ### Test-4: Dictionary files must not appear in the working directory
 1. Ensure no files like "dictionary-latest-cache.*" exists in the working folder.
 

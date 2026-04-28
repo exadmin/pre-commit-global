@@ -19,8 +19,8 @@ if [ -e "$LOCAL_HOOK" ]; then
 else
   echo -e "${PREFIX} Calling CyberFerret checks for ${REPO_PATH}"
   if [ -f "${REPO_PATH}/.qubership/grand-report.json" ]; then
-      if [ -n "$1" ] && grep -q "@skip_cf" "$1"; then
-          echo -e "${PREFIX} ${ORANGE} Skip CyberFerret checks due to @skip_cf in commit message${NC}"
+      if [ -n "$1" ] && grep -Eq "@(skip_cf|cf_ignore|cf_skip|ignore_cf)" "$1"; then
+          echo -e "${PREFIX} ${ORANGE} Skip CyberFerret checks due to CyberFerret skip flag in commit message${NC}"
       else
           GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
           JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret-cli.jar"
