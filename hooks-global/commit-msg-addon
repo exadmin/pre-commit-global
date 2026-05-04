@@ -3,33 +3,87 @@
 # Define color codes
 CYAN='\033[0;36m'
 ORANGE='\033[0;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color (reset)
-PREFIX="${CYAN}[QUBERSHIP]${NC}"
+PREFIX="${CYAN}[QUBERSHIP]"
+
+cprint() {
+  COLOR="$1"
+  MESSAGE="$2"
+  echo -e "${PREFIX} ${COLOR}${MESSAGE}${NC}"
+}
 
 REPO_PATH="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -z "$REPO_PATH" ]; then
   REPO_PATH="$PWD"
 fi
-LOCAL_HOOK="${REPO_PATH}/.git/hooks/commit-msg"
+
+is_absolute_path() {
+  case "$1" in
+    /*|[A-Za-z]:/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+resolve_worktree_git_dir() {
+  if [ -d "${REPO_PATH}/.git" ]; then
+    RESOLVED_WORKTREE_GIT_DIR="${REPO_PATH}/.git"
+    return
+  fi
+
+  if [ -f "${REPO_PATH}/.git" ]; then
+    GIT_DIR="$(sed -n 's/^gitdir: //p' "${REPO_PATH}/.git")"
+    if ! is_absolute_path "$GIT_DIR"; then
+      GIT_DIR="${REPO_PATH}/${GIT_DIR}"
+    fi
+
+    RESOLVED_WORKTREE_GIT_DIR="$GIT_DIR"
+    return
+  fi
+
+  RESOLVED_WORKTREE_GIT_DIR="${REPO_PATH}/.git"
+}
+
+resolve_git_dir() {
+  if [ -f "${REPO_PATH}/.git" ]; then
+    GIT_COMMON_DIR="$(git -C "$REPO_PATH" rev-parse --git-common-dir 2>/dev/null)"
+    if [ -n "$GIT_COMMON_DIR" ]; then
+      if is_absolute_path "$GIT_COMMON_DIR"; then
+        RESOLVED_GIT_DIR="$GIT_COMMON_DIR"
+      else
+        RESOLVED_GIT_DIR="${GIT_WORKTREE_DIR}/${GIT_COMMON_DIR}"
+      fi
+      return
+    fi
+  fi
+
+  RESOLVED_GIT_DIR="$GIT_WORKTREE_DIR"
+}
+
+resolve_worktree_git_dir
+GIT_WORKTREE_DIR="$RESOLVED_WORKTREE_GIT_DIR"
+resolve_git_dir
+GIT_DIR="$RESOLVED_GIT_DIR"
+LOCAL_HOOK="${GIT_DIR}/hooks/commit-msg"
 
 if [ -e "$LOCAL_HOOK" ]; then
-  echo -e "${PREFIX} Local hook is defining - call it"
+  cprint "${CYAN}" "Local hook is defined - calling it"
   sh "$LOCAL_HOOK" "$@"
   exit $?
 else
-  echo -e "${PREFIX} Calling CyberFerret checks for ${REPO_PATH}"
+  cprint "${CYAN}" "Calling CyberFerret checks for ${REPO_PATH}"
   if [ -f "${REPO_PATH}/.qubership/grand-report.json" ]; then
       if [ -n "$1" ] && grep -Eq "@(skip_cf|cf_ignore|cf_skip|ignore_cf)" "$1"; then
-          echo -e "${PREFIX} ${ORANGE} Skip CyberFerret checks due to CyberFerret skip flag in commit message${NC}"
+          cprint "${ORANGE}" "Skip CyberFerret checks due to CyberFerret skip flag in commit message"
       else
           GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
           JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret-cli.jar"
           if [ ! -f "$JAR_PATH" ]; then
-              echo -e "${PREFIX} ${ORANGE} 'cyberferret-cli.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret.${NC}"
+              cprint "${ORANGE}" "'cyberferret-cli.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret."
               exit 1
           fi
 
-          TEMP_FILES_LIST="${REPO_PATH}/.git/cf_files.list"
+          TEMP_FILES_LIST="${GIT_WORKTREE_DIR}/cf_files.list"
           # trap 'rm -f "$TEMP_FILES_LIST"' EXIT HUP INT TERM
           if git rev-parse --verify HEAD >/dev/null 2>&1; then
               git diff HEAD --name-only > "$TEMP_FILES_LIST"
@@ -37,11 +91,17 @@ else
               git diff --cached --name-only > "$TEMP_FILES_LIST"
           fi
           CMD="java -cp \"$JAR_PATH\" com.github.exadmin.cyberferret.CyberFerretCLI \"$REPO_PATH\" \"$TEMP_FILES_LIST\""
-          echo -e "${PREFIX} ${CMD}"
+		  cprint "${CYAN}" "${CMD}"          
           eval "$CMD"
-          exit $?
+          CMD_EXIT_CODE=$?
+          if [ $CMD_EXIT_CODE -ne 0 ]; then
+              cprint "${RED}" "Commit is not allowed"
+			  cprint "If you think this warning must be ignored once - use any of magic words '@cf_ignore, @cf_skip, @ignore_cf, @skip_cf' right in the commit message (any place)"
+			  cprint "If found signatures must be added to permanent ignores - use CyberFerret GUI app"
+          fi
+          exit $CMD_EXIT_CODE
       fi
   else
-      echo -e "${PREFIX} ${ORANGE} File '.qubership/grand-report.json' not found in ${REPO_PATH}. Skipping CyberFerret checks.${NC}"
+      cprint "${ORANGE}" "File '.qubership/grand-report.json' not found in ${REPO_PATH}. Skipping CyberFerret checks."
   fi
 fi

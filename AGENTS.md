@@ -16,3 +16,5 @@ The project implements git global hooks with following advantages:
 - Until asked:
   - Do not change operations order
   - Do not optimize anything
+- Hooks may be run under Windows, Linux and macOS - build paths correctly.
+- Use cprint() function for any printing to console. ${CYAN} is a default color to be used for normal messaging.

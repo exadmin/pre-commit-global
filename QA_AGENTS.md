@@ -74,3 +74,21 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 2. Add all files into staged
 3. Call git-commit for them: git commit -m "lot of files"
 4. Ensure every thing is passed successfully
+
+
+### Test-7: Check worktrees functionality
+1. Go to "/tmp" directory
+2. Create new REPO1 git repository using "git init"
+3. Go inside REPO1
+4. Do "echo 'hello' > hello.txt'"
+5. Add this file into staged
+6. Do commit with message "initial commit"
+7. Call "git worktree add ../REPO2"
+8. Go to REPO2 folder
+9. Call "echo '{}' > .qubership/grand-report.json"
+10. Do "echo 'ttt' > ttt.txt'"
+11. Add ttt.txt file into staged
+12. Do commit with message "ttt is added"
+13. Ensure commit is passed successfully
+14. Ensure no other files then "ttt.txt", "hello.txt", ".qubership/grand-report.json" and ".git" exist in the REPO2 directory
+15. Ensure file REPO1/.git/worktrees/cf_files.list exist with content "ttt.txt"

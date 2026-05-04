@@ -2,12 +2,13 @@
 
 @echo off
 setlocal
+set PREFIX=[QUBERSHIP]
 
 if exist "%~dp0hooks-global" (
   git config --global core.hooksPath "%~dp0hooks-global"
-  echo [OK] Global hooks are set to %~dp0hooks-global
+  echo %PREFIX% [OK] Global hooks are set to %~dp0hooks-global
 ) else (
-  echo [ERROR] hooks-global folder not found at: "%~dp0hooks-global"
+  echo %PREFIX% [ERROR] hooks-global folder not found at: "%~dp0hooks-global"
 )
 
 endlocal

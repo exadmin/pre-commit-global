@@ -1,5 +1,4 @@
 # .codex/rules/default.rules
-# Формат: Starlark. Правила сравниваются с argv (как execvp).
 
 prefix_rule(
     pattern = ["git", "init"],
@@ -19,7 +18,7 @@ prefix_rule(
     match = ["git diff"],
 )
 
-# Разрешает любые варианты commit (с -m, --amend и т.д.)
+# Allows any variants of commit
 prefix_rule(
     pattern = ["git", "commit"],
     decision = "allow",

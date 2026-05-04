@@ -10,9 +10,9 @@ PREFIX="${CYAN}[QUBERSHIP]${NC}"
 
 # Check if GLOBAL_HOOKS_PATH is empty
 if [ -z "$GLOBAL_HOOKS_PATH" ]; then
-    echo "${PREFIX} Error: Global hooks path is not configured."
-    echo "${PREFIX} Please set up global hooks using: git config --global core.hooksPath <path>"
-    echo "${PREFIX} Or follow the installation instructions in the README.md from https://github.com/exadmin/pre-commit-global"
+    echo -e "${PREFIX} Error: Global hooks path is not configured."
+    echo -e "${PREFIX} Please set up global hooks using: git config --global core.hooksPath <path>"
+    echo -e "${PREFIX} Or follow the installation instructions in the README.md from https://github.com/exadmin/pre-commit-global"
     exit 1
 fi
 
@@ -36,7 +36,9 @@ if [ -z "$SKIP_PULL" ]; then
     # todo: support case when network service is not available
     if git -C "$GLOBAL_HOOKS_PATH" pull; then
         echo -e "${PREFIX} Global hooks updated successfully"
-        echo "$CURRENT_TIME" > "$TIMESTAMP_FILE"
+        cat > "$TIMESTAMP_FILE" <<EOF
+$CURRENT_TIME
+EOF
     else
         echo -e "${PREFIX} Warning: Failed to update global hooks"
     fi

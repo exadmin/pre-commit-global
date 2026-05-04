@@ -1,8 +1,0 @@
-# .codex/config.toml
-model = "gpt-5.2-codex"
-
-# В интерактиве: спрашивать подтверждение, когда правило/песочница требуют.
-approval_policy = "on-request"
-
-# Рекомендуемый режим песочницы для проектов:
-sandbox_mode = "workspace-write"
