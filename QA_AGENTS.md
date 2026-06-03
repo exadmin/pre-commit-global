@@ -93,3 +93,19 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 13. Ensure commit is passed successfully
 14. Ensure no other files but "ttt.txt", "hello.txt", ".qubership/grand-report.json" and ".git" exist in the REPO2 directory
 15. Ensure file REPO1/.git/worktrees/REPO2/cf_files.list exist with content "ttt.txt"
+
+### Test-8: Check multiple signatures can be found in same file
+1. Go to "/tmp" directory
+2. Create new REPO3 git repository using "git init"
+3. Go inside REPO3
+4. Do "echo -e 'monitoring.netcracker.com\nsome.netcracker.com'" > file.txt
+5. Add this file into staged
+6. Do commit with message "initial commit"
+7. The commit must fail with messages in the console, like:
+```
+...
+[ERROR]Signature 'some.netcracker.com' is found in
+...
+[QUBERSHIP] Commit is not allowed
+...
+```
