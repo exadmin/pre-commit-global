@@ -61,7 +61,7 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 ### Test-5: Only staged files must be processed during commit
 1. Create following files in the repository:
    * echo "hello" > hello.file
-   * echo "Password1" > pass.txt
+   * echo "paSSw0rd" > pass.txt
 2. Add only "hello.file" into staged files
 3. Do commit: git commit -m "adding hello.file only commit"
 4. Ensure commit is passed successfully
@@ -85,10 +85,11 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 6. Do commit with message "initial commit"
 7. Call "git worktree add ../REPO2"
 8. Go to REPO2 folder
-9. Call "echo '{}' > .qubership/grand-report.json"
+9a. Call "mkdir -p .qubership"
+9b. Call "echo '{}' > .qubership/grand-report.json"
 10. Do "echo 'ttt' > ttt.txt'"
 11. Add ttt.txt file into staged
 12. Do commit with message "ttt is added"
 13. Ensure commit is passed successfully
-14. Ensure no other files then "ttt.txt", "hello.txt", ".qubership/grand-report.json" and ".git" exist in the REPO2 directory
-15. Ensure file REPO1/.git/worktrees/cf_files.list exist with content "ttt.txt"
+14. Ensure no other files but "ttt.txt", "hello.txt", ".qubership/grand-report.json" and ".git" exist in the REPO2 directory
+15. Ensure file REPO1/.git/worktrees/REPO2/cf_files.list exist with content "ttt.txt"
