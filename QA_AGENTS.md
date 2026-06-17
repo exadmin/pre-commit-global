@@ -99,10 +99,11 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 2. Create new REPO3 git repository using "git init"
 3. Go inside REPO3
 4. Do "echo -e 'monitoring.netcracker.com\nsome.netcracker.com'" > file.txt
-5. Call "echo '{}' > .qubership/grand-report.json"
-6. Add this file into staged
-7. Do commit with message "initial commit"
-8. The commit must fail with messages in the console, like:
+5. Call "mkdir -p .qubership"
+6. Call "echo '{}' > .qubership/grand-report.json"
+7. Add this file into staged
+8. Do commit with message "initial commit"
+9. The commit must fail with messages in the console, like:
 ```
 ...
 [ERROR]Signature 'some.netcracker.com' is found in
@@ -122,9 +123,11 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 8. Go inside wt folder
 9. Push current branch to origin and set upstream: `git push -u origin feat`
 10. Age the throttle so hooks self-update runs: `echo 0 > "$(git config --global core.hooksPath)/.last_pull_timestamp"`
-11. Create empty commit: `git commit --allow-empty -m x`
-12. Push current branch to origin
-13. Reset current branch using `git reset --soft HEAD~1`
-14. Do commit with message "squash"
-15. Ensure commit is passed successfully
-16. Ensure `git reflog` does not contain "pull: Fast-forward" right after reset
+11. Create file "x.txt" with content inside "x"
+12. Add x.txt file into staged
+13. Do commit with message "x"
+14. Push current branch to origin
+15. Reset current branch using `git reset --soft HEAD~1`
+16. Do commit with message "squash"
+17. Ensure commit is passed successfully
+18. Ensure `git reflog` does not contain "pull: Fast-forward" right after reset
