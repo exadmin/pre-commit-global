@@ -101,7 +101,7 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 4. Do "echo -e 'monitoring.netcracker.com\nsome.netcracker.com'" > file.txt
 5. Call "mkdir -p .qubership"
 6. Call "echo '{}' > .qubership/grand-report.json"
-7. Add this file into staged
+7. Add `file.txt` file into staged
 8. Do commit with message "initial commit"
 9. The commit must fail with messages in the console, like:
 ```
