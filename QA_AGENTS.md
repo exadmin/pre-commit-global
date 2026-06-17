@@ -99,9 +99,10 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 2. Create new REPO3 git repository using "git init"
 3. Go inside REPO3
 4. Do "echo -e 'monitoring.netcracker.com\nsome.netcracker.com'" > file.txt
-5. Add this file into staged
-6. Do commit with message "initial commit"
-7. The commit must fail with messages in the console, like:
+5. Call "echo '{}' > .qubership/grand-report.json"
+6. Add this file into staged
+7. Do commit with message "initial commit"
+8. The commit must fail with messages in the console, like:
 ```
 ...
 [ERROR]Signature 'some.netcracker.com' is found in
@@ -109,3 +110,21 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 [QUBERSHIP] Commit is not allowed
 ...
 ```
+
+### Test-9: Check git pull in worktree hook does not pull user's repository
+1. Go to "/tmp" directory
+2. Create new bare ORIGIN git repository using "git init --bare"
+3. Clone ORIGIN repository into "main" folder
+4. Go inside main folder
+5. Create empty initial commit to ensure `HEAD` exists: `git commit --allow-empty -m "init"`
+6. Push current branch to origin and set upstream: `git push -u origin HEAD`
+7. Add new worktree with new branch: `git worktree add ../wt -b feat`
+8. Go inside wt folder
+9. Push current branch to origin and set upstream: `git push -u origin feat`
+10. Age the throttle so hooks self-update runs: `echo 0 > "$(git config --global core.hooksPath)/.last_pull_timestamp"`
+11. Create empty commit: `git commit --allow-empty -m x`
+12. Push current branch to origin
+13. Reset current branch using `git reset --soft HEAD~1`
+14. Do commit with message "squash"
+15. Ensure commit is passed successfully
+16. Ensure `git reflog` does not contain "pull: Fast-forward" right after reset
