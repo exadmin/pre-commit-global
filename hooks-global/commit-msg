@@ -34,7 +34,7 @@ fi
 # Run git pull if required
 if [ -z "$SKIP_PULL" ]; then
     # todo: support case when network service is not available
-    if env -u GIT_DIR -u GIT_WORK_TREE git -C "$GLOBAL_HOOKS_PATH" pull --ff-only; then
+    if env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git -C "$GLOBAL_HOOKS_PATH" pull --ff-only; then
         echo -e "${PREFIX} Global hooks updated successfully"
         cat > "$TIMESTAMP_FILE" <<EOF
 $CURRENT_TIME
