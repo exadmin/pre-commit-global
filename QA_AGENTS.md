@@ -131,3 +131,39 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 16. Do commit with message "squash"
 17. Ensure commit is passed successfully
 18. Ensure `git reflog` does not contain "pull: Fast-forward" right after reset
+
+### Test-10: Check global hooks self-update does not corrupt user's staged index
+1. Go to "/tmp" directory
+2. Save current global hooks path: `OLD_HOOKS_PATH=$(git config --global core.hooksPath)`. Note - restore global hook path (as described in the end of this test case) in any case: if test fails or passed. 
+3. Create new unique folders "hooks-origin-?", "hooks-upstream-?", "hooks-installed-?" and "user-repo-?", let's call them HOOKS_ORIGIN, HOOKS_UPSTREAM, HOOKS_INSTALLED and USER_REPO
+4. Create new bare HOOKS_ORIGIN git repository using "git init --bare"
+5. Clone current pre-commit-global repository into HOOKS_UPSTREAM folder
+6. Go inside HOOKS_UPSTREAM folder
+7. Set HOOKS_ORIGIN as "origin" remote: `git remote set-url origin "$HOOKS_ORIGIN"`
+8. Push current branch to origin and set upstream: `git push -u origin HEAD`
+9. Set HOOKS_ORIGIN HEAD to pushed branch: `git --git-dir="$HOOKS_ORIGIN" symbolic-ref HEAD "refs/heads/$(git branch --show-current)"`
+10. Clone HOOKS_ORIGIN repository into HOOKS_INSTALLED folder
+11. Ensure "$HOOKS_INSTALLED/hooks-global/pre-commit" file exists and is executable
+12. Set global hooks path to installed hooks: `git config --global core.hooksPath "$HOOKS_INSTALLED/hooks-global"`
+13. Go inside HOOKS_UPSTREAM folder
+14. Create a fast-forward update for installed hooks repository:
+    * echo "self-update marker" > self-update-marker.txt
+15. Add "self-update-marker.txt" into staged files
+16. Do commit with message "self-update marker"
+17. Push current branch to origin
+18. Create new USER_REPO git repository using "git init"
+19. Go inside USER_REPO
+20. Call "mkdir -p .qubership"
+21. Call "echo '{}' > .qubership/grand-report.json"
+22. Add ".qubership/grand-report.json" into staged files
+23. Do commit with message "init"
+24. Age the throttle so hooks self-update runs: `echo 0 > "$(git config --global core.hooksPath)/.last_pull_timestamp"`
+25. Create file "user-file.txt" with content inside "user content"
+26. Add only "user-file.txt" into staged files
+27. Ensure staged files list contains exactly "user-file.txt" before commit
+28. Do commit with message "user commit"
+29. Ensure commit is passed successfully
+30. Ensure last commit contains exactly "user-file.txt"
+31. Ensure "self-update-marker.txt" does not exist in USER_REPO working directory
+32. Ensure "self-update-marker.txt" is not staged in USER_REPO
+33. Restore previous global hooks path: `git config --global core.hooksPath "$OLD_HOOKS_PATH"`
