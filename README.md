@@ -25,7 +25,7 @@ the global hooks, follow the manual setup instructions below.
 
 #### Java
 
-Install an OpenJDK or Oracle Java Runtime Environment. The hooks are tested with Oracle JDK SE 25.
+Install a Java 21 or newer runtime to run CyberFerret CLI.
 
 #### Git
 
