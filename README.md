@@ -1,97 +1,121 @@
 # About
-The main aim of this project is to call "https://pre-commit.com/" hooks without necessity of calling installation of the 
-framework for each cloned repository.
 
-The approach is based on global Git-hooks scripts. Generally it may be useful for teams who work 
+The main aim of this project is to call "https://pre-commit.com/" hooks without necessity of calling installation of
+the framework for each cloned repository.
+
+The approach is based on global Git-hooks scripts. Generally it may be useful for teams who work
 with a lot of repositories with similar rules to perform checks on commit.
 
 The logic of solution is following:
 1. Global hooks are registered once for the Git application
 2. Each time user commits - Global Hooks are triggered:
    1. First of all online updates are checked for the Global Hooks
-   2. If working repository contains ".pre-commit-config.yaml" file then "pre-commit" framework 
+   2. If working repository contains ".pre-commit-config.yaml" file then "pre-commit" framework
    will be started using this configuration.
-   3. In case no errors happened on the previous step (or no configuration file is found) then local hook ".git/pre-commit" will be called if exists.
+   3. In case no errors happened on the previous step (or no configuration file is found) then local hook
+   ".git/pre-commit" will be called if exists.
 4. If other type (then pre-commit) of git-event is happened and local hook-file exists - then it will be called.
 
-# How to install
+## How to install
 
-## Prerequisites - to be done once per working environment
-### Java
-Install Open- or Oracle Java Runtime Environment.
-Tested on Oracle JDK SE v.25
+Use the [Qubership developer installer][developer-installer] to install the complete baseline toolset. To install only
+the global hooks, follow the manual setup instructions below.
 
-### Git
-Git to be installed from https://git-scm.com/install/
-Ensure that no Git global hook paths are setup yet, check "core.hooksPath" property value with
-```shell
+### Prerequisites
+
+#### Java
+
+Install a Java 21 or newer runtime to run CyberFerret CLI.
+
+#### Git
+
+Install Git from [the Git installation page](https://git-scm.com/install/).
+
+Check whether a global hooks path is already configured:
+
+```sh
 git config --global core.hooksPath
 # or
 git config --global --list
 ```
-If you have global hooks installed - then you have to decide what to do: either you don't need this functionality or 
-you can proxify it somehow.
 
-## CyberFerret password
-Setup System Environment variable with password value to be used to decrypt dictionary with signatures to search
-Env Variable name is 'CYBER_FERRET_PASSWORD'
-Password to be obtained from the owner of signatures dictionaries
+If a global hooks path is already configured, decide whether to replace it or make the existing hooks delegate to this
+project.
 
-## Prerequisites - to be done for each repository
-To trigger CyberFerret check on pre-commit it's required for target repository to have special file "\.qubership\grand-report.json".
-This file originally is used by CyberFerret application to keep ignores for false-positive signatures.
-So, you can just put empty JSON file here - to be just marker for git-hooks to trigger.
+#### CyberFerret password
 
-## Install global hooks
-Note, that downloaded repository will be registered in the Git global configuration, 
-so pay attention it should be quite static folder, i.e. if moved/renamed - then configuration must be reset.
+Obtain the CyberFerret dictionary password from the dictionary owner. Configure the password as the
+`CYBER_FERRET_PASSWORD` operating-system environment variable so CyberFerret can decrypt the signature dictionary.
 
+### Repository setup
 
-### Windows
-Navigate to the folder where new subfolder will be created by git clone, then run following script
-```shell
-REM set name of the folder to download repository into
-set FOLDER_NAME=git-global-hooks
+To trigger the CyberFerret check, add a `.qubership/grand-report.json` file to the target repository.
+CyberFerret uses this file to store ignored false-positive signatures. An empty JSON object is sufficient when the file
+serves only as a marker for the hooks.
 
-REM do repository cloning
-git clone https://github.com/exadmin/qubership-pre-commit-proto.git "%FOLDER_NAME%"
+### Install global hooks manually
 
-REM Setup global path to hooks
-cd "%FOLDER_NAME%"
-git config --global core.hooksPath "%cd%\hooks-global"
-```
+The registration scripts configure the cloned repository's `hooks-global` directory as Git's global hooks path. Keep
+the clone in a stable location. If you move or rename it, run the registration script again from its new location.
 
-### Linux
-Navigate to the folder where new subfolder will be created by git clone, then run following script
-```shell
-# set name of the folder to download repository into
-FOLDER_NAME=git-global-hooks
+#### Windows
 
-# do repository cloning
-git clone https://github.com/exadmin/qubership-pre-commit-proto.git "$FOLDER_NAME"
+Open Command Prompt in the directory where you want to create the clone, then run:
 
-# Setup global path to hooks
-cd "$FOLDER_NAME"
-
-# Linux variant
-git config --global core.hooksPath "$(pwd)/hooks-global"
-```
-
-Check that property is set correctly
-```shell
+```bat
+set "FOLDER_NAME=git-global-hooks"
+git clone https://github.com/exadmin/pre-commit-global.git "%FOLDER_NAME%"
+cd /d "%FOLDER_NAME%"
+win_register_this_folder_as_global_hooks.cmd
 git config --global core.hooksPath
 ```
 
-Now, each time you are doing
-```shell
+The final command prints a path similar to:
+
+```text
+C:\path\to\git-global-hooks\hooks-global
+```
+
+#### Linux
+
+Open a terminal in the directory where you want to create the clone, then run:
+
+```sh
+FOLDER_NAME=git-global-hooks
+git clone https://github.com/exadmin/pre-commit-global.git "$FOLDER_NAME"
+cd "$FOLDER_NAME"
+./linux_register_this_folder_as_global_hooks.sh
+git config --global core.hooksPath
+```
+
+The final command prints a path similar to:
+
+```text
+/path/to/git-global-hooks/hooks-global
+```
+
+Git now calls the global hooks whenever you commit:
+
+```sh
 git commit -m "Commit description"
 ```
-a Global Hooks will be called with mentioned logic as described at the beginning of README.md file.
 
+## How to remove
 
+Run the matching unregistration script from the cloned repository.
 
-## Uninstall or disable
-Just unset Git global property to hooks
-```shell
-git config --global --unset core.hooksPath
+### Windows
+
+```bat
+cd /d "C:\path\to\git-global-hooks"
+win_unregister_this_folder_as_global_hooks.cmd
 ```
+
+### Linux
+
+```sh
+cd /path/to/git-global-hooks
+./linux_unregister_this_folder_as_global_hooks.sh
+```
+
+[developer-installer]: https://github.com/Netcracker/qubership-ai-agent-telemetry/blob/main/global-scripts/README.md
