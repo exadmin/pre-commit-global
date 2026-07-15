@@ -49,7 +49,7 @@ Obtain the CyberFerret dictionary password from the dictionary owner. Configure 
 
 ### Repository setup
 
-To trigger the CyberFerret pre-commit check, add a `.qubership/grand-report.json` file to the target repository.
+To trigger the CyberFerret check, add a `.qubership/grand-report.json` file to the target repository.
 CyberFerret uses this file to store ignored false-positive signatures. An empty JSON object is sufficient when the file
 serves only as a marker for the hooks.
 
