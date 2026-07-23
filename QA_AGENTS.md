@@ -1,169 +1,297 @@
-# How to test the functionality
+# How to test the functionality on all operating systems
 
 ## Generic rules
-There is list of test-steps which you need execute one by one.
-If step is failed unexpectedly - Do not continue test-scenario if some step is failed
-If step is failed unexpectedly - print full command line with all arguments which was executed.
-If step is failed unexpectedly - print out all error messages and logs you have for the failed step, do not trim or edit them.
-If step is failed unexpectedly - provide your vision of root cause for the failed steps.
+
+Run the test steps one by one in the specified order.
+
+Use commands and path syntax that are native to the current operating system. The instructions describe file-system
+operations abstractly when their command syntax differs between Windows, Linux, and macOS.
+
+Prefer using `cmd.exe` batch files instead of PowerShell scripts on Windows.
+
+If a step fails unexpectedly:
+
+- Do not continue the test scenario.
+- Print the full command line, including all arguments, that was executed.
+- Print all available error messages and logs without trimming or editing them.
+- Provide your assessment of the root cause.
+
+Exception: if Test 6 fails on Windows specifically because a generated path exceeds the `MAX_PATH` limit, report the
+failure as described above, skip the remaining steps of Test 6, and continue with Test 7. Do not treat any other error
+as this exception.
 
 ## Test cases
 
 ### Preparing for testing
-0. Check if "CYBER_FERRET_PASSWORD" environment variable is set and not empty
-1. Go to "/tmp" folder
-2. Create new folder "pre-commit-global-qa-?" where ? is a new number which guarantees folder uniqueness. If ? already exists - use another number by increasing it by 1. 
-3. Go to new folder "pre-commit-global-qa-?", let's call it "working folder"
-4. Initialize git-repository there
-5. Create empty initial commit to ensure `HEAD` exists: `git commit --allow-empty -m "init"`
-5. Add following files to the repository:
-   * echo "{}" > .qubership/grand-report.json
 
-### Test-1: Sunny-day scenario - good files are committed successfully
-1. Create following test files in the repository:
-   * echo "one" > one.file
-   * echo "two" > "two two.file"
-   * echo "three" > subfolder/three.file
-   * echo "four" > "subfolder with spaces/four with space.file"
-2. Add all these files into git staged files
-3. Do commit: git commit -m "fake commit"
-4. Ensure commit is passed successfully
+0. Check that the `CYBER_FERRET_PASSWORD` environment variable is set and is not empty.
+1. Go to the system temporary directory.
+2. Create a directory named `pre-commit-global-qa-?`, where `?` is a number that makes the directory name unique. If
+   the directory already exists, increment the number until the name is unique.
+3. Go to the new `pre-commit-global-qa-?` directory. This directory is the working directory.
+4. Initialize a Git repository there.
+5. Create an empty initial commit to ensure that `HEAD` exists: `git commit --allow-empty -m "init"`.
+6. Create `.qubership/grand-report.json`, including its parent directory, with exactly this content:
 
-### Test-2: There are bad signatures in the files - commit must not pass
-1. Now create following test files in the repository:
-   * echo "ghp_xxxxxxxxyyyyyyyyQrStUvWxYz0123456789" > secret.file
-2. Add file into git staged files
-3. Do commit: git commit -m "fake2 commit"
-4. Ensure commit is failed
+   ```json
+   {}
+   ```
 
-### Test-3: There should be ability to bypass checks in controlled way
-1. Do commit: git commit -m "fake2 commit, @skip_cf"
-2. Ensure commit is passed successfully
+### Test 1: Sunny-day scenario: good files are committed successfully
 
-3. Create file "f1.txt" with content inside "hack"
-4. Add created file into git staged files
-5. Do commit: git commit -m "fake2 commit, @cf_ignore"
-6. Ensure commit is passed successfully
+1. Create the following test files in the repository:
 
-7. Create file "f2.txt" with content inside "hack hack"
-8. Add created file into git staged files
-9. Do commit: git commit -m "fake2 commit, @cf_skip"
-10. Ensure commit is passed successfully
+   - `one.file` with the content `one`.
+   - `two two.file` with the content `two`.
+   - `subfolder/three.file` with the content `three`.
+   - `subfolder with spaces/four with space.file` with the content `four`.
 
-11. Create file "f3.txt" with content inside "hack hack hack"
-12. Add created file into git staged files
-13. Do commit: git commit -m "fake2 commit, @ignore_cf"
-14. Ensure commit is passed successfully
+   Create all missing parent directories.
+2. Stage all these files.
+3. Commit the files: `git commit -m "fake commit"`.
+4. Ensure that the commit succeeds.
 
-### Test-4: Dictionary files must not appear in the working directory
-1. Ensure no files like "dictionary-latest-cache.*" exists in the working folder.
+### Test 2: Files contain bad signatures: the commit must not pass
 
-### Test-5: Only staged files must be processed during commit
-1. Create following files in the repository:
-   * echo "hello" > hello.file
-   * echo "paSSw0rd" > pass.txt
-2. Add only "hello.file" into staged files
-3. Do commit: git commit -m "adding hello.file only commit"
-4. Ensure commit is passed successfully
-5. Add pass.txt to staged files
-6. Do commit: git commit -m "adding pass.txt" - this commit must fail.
-7. Delete pass.txt
+1. Create `secret.file` in the repository with this content:
 
-### Test-6: Check commiting lot of files
-1. Create 1000 empty *.txt files with long random names (32 chars each) which are put into random hierarchy of folders (folder names are randome too with 32 chars lenght) with deep-level = 5.
-2. Add all files into staged
-3. Call git-commit for them: git commit -m "lot of files"
-4. Ensure every thing is passed successfully
+   ```text
+   ghp_xxxxxxxxyyyyyyyyQrStUvWxYz0123456789
+   ```
 
+2. Stage the file.
+3. Attempt to commit it: `git commit -m "fake2 commit"`.
+4. Ensure that the commit fails.
 
-### Test-7: Check worktrees functionality
-1. Go to "/tmp" directory
-2. Create new REPO1 git repository using "git init"
-3. Go inside REPO1
-4. Do "echo 'hello' > hello.txt'"
-5. Add this file into staged
-6. Do commit with message "initial commit"
-7. Call "git worktree add ../REPO2"
-8. Go to REPO2 folder
-9a. Call "mkdir -p .qubership"
-9b. Call "echo '{}' > .qubership/grand-report.json"
-10. Do "echo 'ttt' > ttt.txt'"
-11. Add ttt.txt file into staged
-12. Do commit with message "ttt is added"
-13. Ensure commit is passed successfully
-14. Ensure no other files but "ttt.txt", "hello.txt", ".qubership/grand-report.json" and ".git" exist in the REPO2 directory
-15. Ensure file REPO1/.git/worktrees/REPO2/cf_files.list exist with content "ttt.txt"
+### Test 3: Checks can be bypassed in a controlled way
 
-### Test-8: Check multiple signatures can be found in same file
-1. Go to "/tmp" directory
-2. Create new REPO3 git repository using "git init"
-3. Go inside REPO3
-4. Do "echo -e 'monitoring.netcracker.com\nsome.netcracker.com'" > file.txt
-5. Call "mkdir -p .qubership"
-6. Call "echo '{}' > .qubership/grand-report.json"
-7. Add `file.txt` file into staged
-8. Do commit with message "initial commit"
-9. The commit must fail with messages in the console which show that a forbidden signature was found, like:
-```
-...
-Signature "NC-SUB-DOMAIN" found in file.txt at position 26
-...
-[QUBERSHIP] Commit is not allowed
-...
-```
+1. Commit the already staged file: `git commit -m "fake2 commit, @skip_cf"`.
+2. Ensure that the commit succeeds.
+3. Create `f1.txt` with the content `hack`.
+4. Stage the created file.
+5. Commit it: `git commit -m "fake2 commit, @cf_ignore"`.
+6. Ensure that the commit succeeds.
+7. Create `f2.txt` with the content `hack hack`.
+8. Stage the created file.
+9. Commit it: `git commit -m "fake2 commit, @cf_skip"`.
+10. Ensure that the commit succeeds.
+11. Create `f3.txt` with the content `hack hack hack`.
+12. Stage the created file.
+13. Commit it: `git commit -m "fake2 commit, @ignore_cf"`.
+14. Ensure that the commit succeeds.
 
-### Test-9: Check git pull in worktree hook does not pull user's repository
-1. Go to "/tmp" directory
-2. Create new bare ORIGIN git repository using "git init --bare"
-3. Clone ORIGIN repository into "main" folder
-4. Go inside main folder
-5. Create empty initial commit to ensure `HEAD` exists: `git commit --allow-empty -m "init"`
-6. Push current branch to origin and set upstream: `git push -u origin HEAD`
-7. Add new worktree with new branch: `git worktree add ../wt -b feat`
-8. Go inside wt folder
-9. Push current branch to origin and set upstream: `git push -u origin feat`
-10. Age the throttle so hooks self-update runs: `echo 0 > "$(git config --global core.hooksPath)/.last_pull_timestamp"`
-11. Create file "x.txt" with content inside "x"
-12. Add x.txt file into staged
-13. Do commit with message "x"
-14. Push current branch to origin
-15. Reset current branch using `git reset --soft HEAD~1`
-16. Do commit with message "squash"
-17. Ensure commit is passed successfully
-18. Ensure `git reflog` does not contain "pull: Fast-forward" right after reset
+### Test 4: Dictionary files must not appear in the working directory
 
-### Test-10: Check global hooks self-update does not corrupt user's staged index
-1. Go to "/tmp" directory
-2. Save current global hooks path: `OLD_HOOKS_PATH=$(git config --global core.hooksPath)`. Note - restore global hook path (as described in the end of this test case) in any case: if test fails or passed. 
-3. Create new unique folders "hooks-origin-?", "hooks-upstream-?", "hooks-installed-?" and "user-repo-?", let's call them HOOKS_ORIGIN, HOOKS_UPSTREAM, HOOKS_INSTALLED and USER_REPO
-4. Create new bare HOOKS_ORIGIN git repository using "git init --bare"
-5. Clone current pre-commit-global repository into HOOKS_UPSTREAM folder
-6. Go inside HOOKS_UPSTREAM folder
-7. Set HOOKS_ORIGIN as "origin" remote: `git remote set-url origin "$HOOKS_ORIGIN"`
-8. Push current branch to origin and set upstream: `git push -u origin HEAD`
-9. Set HOOKS_ORIGIN HEAD to pushed branch: `git --git-dir="$HOOKS_ORIGIN" symbolic-ref HEAD "refs/heads/$(git branch --show-current)"`
-10. Clone HOOKS_ORIGIN repository into HOOKS_INSTALLED folder
-11. Ensure "$HOOKS_INSTALLED/hooks-global/pre-commit" file exists and is executable
-12. Set global hooks path to installed hooks: `git config --global core.hooksPath "$HOOKS_INSTALLED/hooks-global"`
-13. Go inside HOOKS_UPSTREAM folder
-14. Create a fast-forward update for installed hooks repository:
-    * echo "self-update marker" > self-update-marker.txt
-15. Add "self-update-marker.txt" into staged files
-16. Do commit with message "self-update marker"
-17. Push current branch to origin
-18. Create new USER_REPO git repository using "git init"
-19. Go inside USER_REPO
-20. Call "mkdir -p .qubership"
-21. Call "echo '{}' > .qubership/grand-report.json"
-22. Add ".qubership/grand-report.json" into staged files
-23. Do commit with message "init"
-24. Age the throttle so hooks self-update runs: `echo 0 > "$(git config --global core.hooksPath)/.last_pull_timestamp"`
-25. Create file "user-file.txt" with content inside "user content"
-26. Add only "user-file.txt" into staged files
-27. Ensure staged files list contains exactly "user-file.txt" before commit
-28. Do commit with message "user commit"
-29. Ensure commit is passed successfully
-30. Ensure last commit contains exactly "user-file.txt"
-31. Ensure "self-update-marker.txt" does not exist in USER_REPO working directory
-32. Ensure "self-update-marker.txt" is not staged in USER_REPO
-33. Restore previous global hooks path: `git config --global core.hooksPath "$OLD_HOOKS_PATH"`
+1. Ensure that no files matching `*.encrypted` or `*.decrypted` exist in the working directory.
+
+### Test 5: Only staged files are processed during a commit
+
+1. Create the following files in the repository:
+
+   - `hello.file` with the content `hello`.
+   - `pass.txt` with the content `paSSw0rd`.
+
+2. Stage only `hello.file`.
+3. Commit it: `git commit -m "adding hello.file only commit"`.
+4. Ensure that the commit succeeds.
+5. Stage `pass.txt`.
+6. Attempt to commit it: `git commit -m "adding pass.txt"`. The commit must fail.
+7. Delete `pass.txt`.
+
+### Test 6: Commit many files
+
+1. Create 1,000 empty `.txt` files with random 32-character names. Put them into a random five-level directory
+   hierarchy whose directory names are also random 32-character strings.
+
+   On Windows, follow these requirements:
+
+   - Do not generate the files with a parenthesized loop passed directly to `cmd.exe /c`. Variable expansion and
+     command grouping differ between an interactive command and a batch file.
+   - Save the following script as `generate-many-files.cmd` in the working directory, and execute it as a separate
+     batch file:
+
+     ```batch
+     @echo off
+     setlocal EnableExtensions EnableDelayedExpansion
+
+     set "OUTPUT_ROOT=many-files"
+     if exist "%OUTPUT_ROOT%" (
+       echo The output directory already exists: %OUTPUT_ROOT%
+       exit /b 1
+     )
+
+     mkdir "%OUTPUT_ROOT%" || exit /b 1
+
+     for /L %%I in (1,1,1000) do (
+       set "RELATIVE_PATH=%OUTPUT_ROOT%"
+
+       for /L %%L in (1,1,5) do (
+         call :random32 DIRECTORY_NAME
+         set "RELATIVE_PATH=!RELATIVE_PATH!\!DIRECTORY_NAME!"
+       )
+
+       mkdir "!RELATIVE_PATH!" || exit /b 1
+
+       call :random32 FILE_NAME
+       set "FILE_PATH=!RELATIVE_PATH!\!FILE_NAME!.txt"
+       if exist "!FILE_PATH!" (
+         echo Generated a duplicate file path: !FILE_PATH!
+         exit /b 1
+       )
+       type nul > "!FILE_PATH!" || exit /b 1
+     )
+
+     set "FILE_COUNT=0"
+     for /F %%C in ('dir /S /B /A-D "%OUTPUT_ROOT%\*.txt" 2^>nul ^| find /C /V ""') do set "FILE_COUNT=%%C"
+
+     if not "!FILE_COUNT!"=="1000" (
+       echo Expected 1000 generated files, but found !FILE_COUNT!.
+       exit /b 1
+     )
+
+     exit /b 0
+
+     :random32
+     set "RANDOM_VALUE=00000%RANDOM%00000%RANDOM%00000%RANDOM%00000%RANDOM%"
+     set "%~1=%RANDOM_VALUE:~-32%"
+     exit /b 0
+     ```
+
+   - Ensure that the script exits with code `0`, reports no errors, and creates exactly 1,000 `.txt` files under
+     `many-files`.
+   - Delete `generate-many-files.cmd` after it succeeds.
+   - Do not combine script execution, staging, and committing in one `cmd.exe /c` command. Complete and verify this
+     step before proceeding to step 2.
+   - If any step of this test fails on Windows with `Filename too long`, `The filename or extension is too long`, or
+     another error that clearly identifies the `MAX_PATH` limit as the cause, apply the exception in the generic
+     rules: report the failure, skip the remaining steps of Test 6, and continue with Test 7.
+
+2. Stage all the files.
+3. Commit them: `git commit -m "lot of files"`.
+4. Ensure that the commit succeeds.
+
+### Test 7: Check worktree functionality
+
+1. Go to the system temporary directory.
+2. Create a new, uniquely named `REPO1` directory, and initialize a Git repository in it with `git init`.
+3. Go to `REPO1`.
+4. Create `hello.txt` with the content `hello`.
+5. Stage the file.
+6. Commit it with the message `initial commit`.
+7. Add a worktree in a uniquely named sibling `REPO2` directory: `git worktree add <REPO2-path>`.
+8. Go to `REPO2`.
+9. Create `.qubership/grand-report.json`, including its parent directory, with exactly this content:
+
+   ```json
+   {}
+   ```
+
+10. Create `ttt.txt` with the content `ttt`.
+11. Stage `ttt.txt`.
+12. Commit it with the message `ttt is added`.
+13. Ensure that the commit succeeds.
+14. Ensure that no entries other than `ttt.txt`, `hello.txt`, `.qubership/grand-report.json`, and `.git` exist in the
+    `REPO2` directory.
+15. Ensure that `REPO1/.git/worktrees/<REPO2-directory-name>/cf_files.list` exists and contains exactly `ttt.txt`.
+
+### Test 8: Check that multiple signatures can be found in the same file
+
+1. Go to the system temporary directory.
+2. Create a new, uniquely named `REPO3` directory, and initialize a Git repository in it with `git init`.
+3. Go to `REPO3`.
+4. Create `file.txt` with the following exact content and LF line endings:
+
+   ```text
+   monitoring.netcracker.com
+   some.netcracker.com
+   ```
+
+5. Create `.qubership/grand-report.json`, including its parent directory, with exactly this content:
+
+   ```json
+   {}
+   ```
+
+6. Stage `file.txt`.
+7. Attempt to commit it with the message `initial commit`.
+8. Ensure that the commit fails and that the console output reports a forbidden signature, including messages like:
+
+   ```text
+   ...
+   Signature "NC-SUB-DOMAIN" found in file.txt at position 26
+   ...
+   [QUBERSHIP] Commit is not allowed
+   ...
+   ```
+
+### Test 9: Check that `git pull` in a worktree hook does not pull the user's repository
+
+1. Go to the system temporary directory.
+2. Create a new, uniquely named bare `ORIGIN` Git repository with `git init --bare`.
+3. Clone `ORIGIN` into a uniquely named `main` directory.
+4. Go to the `main` directory.
+5. Create an empty initial commit to ensure that `HEAD` exists: `git commit --allow-empty -m "init"`.
+6. Push the current branch to `origin` and set its upstream: `git push -u origin HEAD`.
+7. Add a worktree with a new branch in a uniquely named sibling `wt` directory:
+   `git worktree add <wt-path> -b feat`.
+8. Go to the `wt` directory.
+9. Push the current branch to `origin` and set its upstream: `git push -u origin feat`.
+10. Get the global hooks path from `git config --global core.hooksPath`. In that directory, replace the content of
+    `.last_pull_timestamp` with `0` so that the hooks self-update runs.
+11. Create `x.txt` with the content `x`.
+12. Stage `x.txt`.
+13. Commit it with the message `x`.
+14. Push the current branch to `origin`.
+15. Soft-reset the current branch: `git reset --soft HEAD~1`.
+16. Commit with the message `squash`.
+17. Ensure that the commit succeeds.
+18. Ensure that `git reflog` does not contain `pull: Fast-forward` immediately after the reset.
+
+### Test 10: Check that global hooks self-update does not corrupt the user's staged index
+
+1. Go to the system temporary directory.
+2. Save the current value and the configured or unconfigured state of the global `core.hooksPath` setting. Restore the
+   setting to that exact state at the end of this test, regardless of whether the test succeeds or fails.
+3. In the system temporary directory, create unique directories named `hooks-origin-?`, `hooks-upstream-?`,
+   `hooks-installed-?`, and `user-repo-?`. Refer to their absolute paths as `HOOKS_ORIGIN`, `HOOKS_UPSTREAM`,
+   `HOOKS_INSTALLED`, and `USER_REPO`, respectively.
+4. Initialize `HOOKS_ORIGIN` as a bare Git repository: `git init --bare <HOOKS_ORIGIN-path>`.
+5. Copy (do not clone) the current `pre-commit-global` repository into `HOOKS_UPSTREAM`.
+6. Go to `HOOKS_UPSTREAM`.
+7. Set `HOOKS_ORIGIN` as the `origin` remote: `git remote set-url origin <HOOKS_ORIGIN-path>`.
+8. Push the current branch to `origin` and set its upstream: `git push -u origin HEAD`.
+9. Determine the current branch name. Set `HOOKS_ORIGIN`'s `HEAD` symbolic reference to
+   `refs/heads/<current-branch-name>` by running `git symbolic-ref` against the bare repository.
+10. Clone `HOOKS_ORIGIN` into `HOOKS_INSTALLED`.
+11. Ensure that `HOOKS_INSTALLED/hooks-global/pre-commit` exists. On systems that use executable permission bits,
+    ensure that it is executable. On all systems, ensure that Git records it as executable.
+12. Set the global hooks path to the absolute `HOOKS_INSTALLED/hooks-global` path:
+    `git config --global core.hooksPath <installed-hooks-path>`.
+13. Go to `HOOKS_UPSTREAM`.
+14. Create `self-update-marker.txt` with the content `self-update marker`.
+15. Stage `self-update-marker.txt`.
+16. Ensure that the `HOOKS_INSTALLED/cyberferret-dist` directory exists. Create it if it does not exist.
+17. Commit it with the message `self-update marker`.
+18. Push the current branch to `origin`.
+19. Initialize `USER_REPO` as a Git repository with `git init`.
+20. Go to `USER_REPO`.
+21. Create `.qubership/grand-report.json`, including its parent directory, with exactly this content:
+
+    ```json
+    {}
+    ```
+
+22. Stage `.qubership/grand-report.json`.
+23. Commit it with the message `init`.
+24. Get the global hooks path from `git config --global core.hooksPath`. In that directory, replace the content of
+    `.last_pull_timestamp` with `0` so that the hooks self-update runs.
+25. Create `user-file.txt` with the content `user content`.
+26. Stage only `user-file.txt`.
+27. Ensure that the staged-files list contains exactly `user-file.txt` before the commit.
+28. Commit it with the message `user commit`.
+29. Ensure that the commit succeeds.
+30. Ensure that the last commit contains exactly `user-file.txt`.
+31. Ensure that `self-update-marker.txt` does not exist in the `USER_REPO` working directory.
+32. Ensure that `self-update-marker.txt` is not staged in `USER_REPO`.
+33. Restore the global `core.hooksPath` setting to the exact value and configured or unconfigured state saved in
+    step 2.
