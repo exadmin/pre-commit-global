@@ -56,7 +56,8 @@ serves only as a marker for the hooks.
 
 The hook supports Windows on AMD64, Linux on AMD64, and macOS on ARM64. It downloads the matching native CyberFerret CLI
 when needed and checks for a newer release at most once every 16 hours. If the update service is unavailable, the hook
-continues with the installed executable.
+continues with the installed executable. Update timestamps and installed versions are tracked separately for each
+platform asset in `cyberferret-dist/.cfcli-state`.
 
 ### Install global hooks manually
 

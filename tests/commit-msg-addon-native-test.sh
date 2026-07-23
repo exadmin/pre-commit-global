@@ -173,7 +173,13 @@ run_hook() {
 install_existing_executable() {
   ASSET_NAME="$1"
   write_native_executable "$DIST_PATH/$ASSET_NAME" "existing"
-  printf 'v1.0.0\n' > "$DIST_PATH/.cfcli-version"
+  printf '%s.version=v1.0.0\n' "$ASSET_NAME" >> "$DIST_PATH/.cfcli-state"
+}
+
+write_update_timestamp() {
+  ASSET_NAME="$1"
+  TIMESTAMP_VALUE="$2"
+  printf '%s.update_check=%s\n' "$ASSET_NAME" "$TIMESTAMP_VALUE" >> "$DIST_PATH/.cfcli-state"
 }
 
 test_platform() {
@@ -190,10 +196,10 @@ test_platform() {
   assert_equals "$HOOK_EXIT" "0"
   assert_file_exists "$DIST_PATH/$PLATFORM_ASSET"
   assert_file_contains "$TEST_CURL_LOG" "releases/latest/download/$PLATFORM_ASSET"
-  assert_equals "$(cat "$DIST_PATH/.cfcli-version")" "v2.0.0"
-  case "$(cat "$DIST_PATH/.update-check.ts")" in
-    ''|*[!0-9]*) fail "Update timestamp is not an integer" ;;
-  esac
+  assert_file_contains "$DIST_PATH/.cfcli-state" "$PLATFORM_ASSET.version=v2.0.0"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "$PLATFORM_ASSET.update_check=$TEST_NOW"
+  assert_file_not_exists "$DIST_PATH/.cfcli-version"
+  assert_file_not_exists "$DIST_PATH/.update-check.ts"
 }
 
 run_platform_tests() {
@@ -205,7 +211,7 @@ run_platform_tests() {
 run_update_tests() {
   setup_scenario
   install_existing_executable cfcli-linux-amd64
-  printf '%s\n' "$((TEST_NOW - 1))" > "$DIST_PATH/.update-check.ts"
+  write_update_timestamp cfcli-linux-amd64 "$((TEST_NOW - 1))"
   run_hook
   assert_equals "$HOOK_EXIT" "0"
   assert_file_not_exists "$TEST_CURL_LOG"
@@ -213,7 +219,7 @@ run_update_tests() {
 
   setup_scenario
   install_existing_executable cfcli-linux-amd64
-  printf '%s\n' "$((TEST_NOW - 57600))" > "$DIST_PATH/.update-check.ts"
+  write_update_timestamp cfcli-linux-amd64 "$((TEST_NOW - 57600))"
   TEST_API_RESPONSE='{"tag_name":"v1.0.0"}'
   export TEST_API_RESPONSE
   run_hook
@@ -222,11 +228,25 @@ run_update_tests() {
   assert_file_contains "$TEST_CURL_LOG" "--connect-timeout 5 --max-time 5"
 
   setup_scenario
-  printf '%s\n' "$TEST_NOW" > "$DIST_PATH/.update-check.ts"
+  write_update_timestamp cfcli-linux-amd64 "$TEST_NOW"
   run_hook
   assert_equals "$HOOK_EXIT" "0"
   assert_equals "$(wc -l < "$TEST_CURL_LOG" | tr -d ' ')" "2"
   assert_file_contains "$TEST_CURL_LOG" "releases/latest/download/cfcli-linux-amd64"
+
+  setup_scenario
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  TEST_UNAME_S=MINGW64_NT-10.0
+  export TEST_UNAME_S
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  assert_file_exists "$DIST_PATH/cfcli-linux-amd64"
+  assert_file_exists "$DIST_PATH/cfcli-windows-amd64.exe"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-linux-amd64.version=v2.0.0"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-linux-amd64.update_check=$TEST_NOW"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-windows-amd64.exe.version=v2.0.0"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-windows-amd64.exe.update_check=$TEST_NOW"
 }
 
 run_fallback_tests() {
@@ -237,7 +257,7 @@ run_fallback_tests() {
   run_hook
   assert_equals "$HOOK_EXIT" "0"
   assert_file_contains "$TEST_CFCLI_LOG" "existing"
-  assert_equals "$(cat "$DIST_PATH/.update-check.ts")" "$TEST_NOW"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-linux-amd64.update_check=$TEST_NOW"
 
   setup_scenario
   install_existing_executable cfcli-linux-amd64
@@ -254,7 +274,7 @@ run_fallback_tests() {
   run_hook
   assert_equals "$HOOK_EXIT" "0"
   assert_file_contains "$TEST_CFCLI_LOG" "existing"
-  assert_equals "$(cat "$DIST_PATH/.cfcli-version")" "v1.0.0"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-linux-amd64.version=v1.0.0"
 
   setup_scenario
   TEST_API_FAIL=1
@@ -265,7 +285,7 @@ run_fallback_tests() {
 
   setup_scenario
   install_existing_executable cfcli-linux-amd64
-  printf '%s\n' "$TEST_NOW" > "$DIST_PATH/.update-check.ts"
+  write_update_timestamp cfcli-linux-amd64 "$TEST_NOW"
   TEST_CFCLI_EXIT=23
   export TEST_CFCLI_EXIT
   run_hook
@@ -289,6 +309,8 @@ run_repository_tests() {
     fail "Expected .cfcli-version to be ignored"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/.update-check.ts ||
     fail "Expected .update-check.ts to be ignored"
+  git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/.cfcli-state ||
+    fail "Expected .cfcli-state to be ignored"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-linux-amd64 ||
     fail "Expected Linux executable to be ignored"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-windows-amd64.exe ||

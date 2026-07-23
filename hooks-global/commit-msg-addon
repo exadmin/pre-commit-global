@@ -36,12 +36,77 @@ select_cfcli_asset() {
   esac
 }
 
+read_cfcli_state_value() {
+  STATE_KEY="$1"
+  CFCLI_STATE_VALUE=
+  if [ ! -f "$STATE_PATH" ]; then
+    return 1
+  fi
+
+  while IFS= read -r STATE_LINE || [ -n "$STATE_LINE" ]; do
+    case "$STATE_LINE" in
+      "$STATE_KEY="*)
+        CFCLI_STATE_VALUE="${STATE_LINE#*=}"
+        return 0
+        ;;
+    esac
+  done < "$STATE_PATH"
+
+  return 1
+}
+
+write_cfcli_state_value() {
+  STATE_KEY="$1"
+  STATE_VALUE="$2"
+  STATE_TEMP_PATH="${STATE_PATH}.tmp.$$"
+  STATE_KEY_FOUND=false
+
+  if ! : > "$STATE_TEMP_PATH"; then
+    return 1
+  fi
+
+  if [ -f "$STATE_PATH" ]; then
+    while IFS= read -r STATE_LINE || [ -n "$STATE_LINE" ]; do
+      case "$STATE_LINE" in
+        "$STATE_KEY="*)
+          if ! printf '%s=%s\n' "$STATE_KEY" "$STATE_VALUE" >> "$STATE_TEMP_PATH"; then
+            rm -f "$STATE_TEMP_PATH"
+            return 1
+          fi
+          STATE_KEY_FOUND=true
+          ;;
+        *)
+          if ! printf '%s\n' "$STATE_LINE" >> "$STATE_TEMP_PATH"; then
+            rm -f "$STATE_TEMP_PATH"
+            return 1
+          fi
+          ;;
+      esac
+    done < "$STATE_PATH"
+  fi
+
+  if [ "$STATE_KEY_FOUND" = false ]; then
+    if ! printf '%s=%s\n' "$STATE_KEY" "$STATE_VALUE" >> "$STATE_TEMP_PATH"; then
+      rm -f "$STATE_TEMP_PATH"
+      return 1
+    fi
+  fi
+
+  if ! mv -f "$STATE_TEMP_PATH" "$STATE_PATH"; then
+    rm -f "$STATE_TEMP_PATH"
+    return 1
+  fi
+}
+
 should_check_for_update() {
-  if [ ! -f "$CFCLI_PATH" ] || [ ! -f "$UPDATE_CHECK_TIMESTAMP_PATH" ]; then
+  if [ ! -f "$CFCLI_PATH" ]; then
     return 0
   fi
 
-  LAST_UPDATE_CHECK="$(cat "$UPDATE_CHECK_TIMESTAMP_PATH" 2>/dev/null)"
+  if ! read_cfcli_state_value "$UPDATE_CHECK_STATE_KEY"; then
+    return 0
+  fi
+  LAST_UPDATE_CHECK="$CFCLI_STATE_VALUE"
   case "$LAST_UPDATE_CHECK" in
     ''|*[!0-9]*) return 0 ;;
   esac
@@ -61,8 +126,8 @@ check_for_cfcli_update() {
     "https://api.github.com/repos/exadmin/CyberFerret/releases/latest")"
   API_EXIT_CODE=$?
 
-  if ! printf '%s\n' "$CURRENT_TIME" > "$UPDATE_CHECK_TIMESTAMP_PATH"; then
-    cprint "${ORANGE}" "Cannot write CyberFerret update timestamp to ${UPDATE_CHECK_TIMESTAMP_PATH}"
+  if ! write_cfcli_state_value "$UPDATE_CHECK_STATE_KEY" "$CURRENT_TIME"; then
+    cprint "${ORANGE}" "Cannot write CyberFerret update timestamp to ${STATE_PATH}"
   fi
 
   if [ "$API_EXIT_CODE" -ne 0 ]; then
@@ -79,8 +144,8 @@ check_for_cfcli_update() {
   fi
 
   LOCAL_VERSION=
-  if [ -f "$VERSION_PATH" ]; then
-    LOCAL_VERSION="$(cat "$VERSION_PATH" 2>/dev/null)"
+  if read_cfcli_state_value "$VERSION_STATE_KEY"; then
+    LOCAL_VERSION="$CFCLI_STATE_VALUE"
   fi
 
   if [ -f "$CFCLI_PATH" ] && [ "$LOCAL_VERSION" = "$LATEST_VERSION" ]; then
@@ -104,8 +169,8 @@ check_for_cfcli_update() {
     return
   fi
 
-  if ! printf '%s\n' "$LATEST_VERSION" > "$VERSION_PATH"; then
-    cprint "${ORANGE}" "Cannot write the installed CyberFerret version to ${VERSION_PATH}"
+  if ! write_cfcli_state_value "$VERSION_STATE_KEY" "$LATEST_VERSION"; then
+    cprint "${ORANGE}" "Cannot write the installed CyberFerret version to ${STATE_PATH}"
   fi
   cprint "${CYAN}" "CyberFerret CLI ${LATEST_VERSION} is installed"
 }
@@ -181,8 +246,9 @@ else
           fi
 
           CFCLI_PATH="${DIST_PATH}/${CFCLI_ASSET}"
-          VERSION_PATH="${DIST_PATH}/.cfcli-version"
-          UPDATE_CHECK_TIMESTAMP_PATH="${DIST_PATH}/.update-check.ts"
+          STATE_PATH="${DIST_PATH}/.cfcli-state"
+          VERSION_STATE_KEY="${CFCLI_ASSET}.version"
+          UPDATE_CHECK_STATE_KEY="${CFCLI_ASSET}.update_check"
           UPDATE_CHECK_INTERVAL=57600
           CURRENT_TIME="$(date +%s)"
 
