@@ -1,5 +1,8 @@
 #!/bin/sh
 
+GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
+. "$GLOBAL_HOOKS_PATH/_bootstrap"
+
 HOOK_NAME="$(basename "$0")"
 LOCAL_HOOK="./.git/hooks/$HOOK_NAME"
 

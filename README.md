@@ -23,9 +23,10 @@ the global hooks, follow the manual setup instructions below.
 
 ### Prerequisites
 
-#### Java
+#### curl
 
-Install a Java 21 or newer runtime to run CyberFerret CLI.
+Install `curl` and ensure it is available on `PATH`. The commit hook uses it to check GitHub Releases and download the
+platform-specific CyberFerret CLI.
 
 #### Git
 
@@ -52,6 +53,10 @@ Obtain the CyberFerret dictionary password from the dictionary owner. Configure 
 To trigger the CyberFerret check, add a `.qubership/grand-report.json` file to the target repository.
 CyberFerret uses this file to store ignored false-positive signatures. An empty JSON object is sufficient when the file
 serves only as a marker for the hooks.
+
+The hook supports Windows on AMD64, Linux on AMD64, and macOS on ARM64. It downloads the matching native CyberFerret CLI
+when needed and checks for a newer release at most once every 16 hours. If the update service is unavailable, the hook
+continues with the installed executable.
 
 ### Install global hooks manually
 

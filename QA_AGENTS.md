@@ -103,10 +103,10 @@ If step is failed unexpectedly - provide your vision of root cause for the faile
 6. Call "echo '{}' > .qubership/grand-report.json"
 7. Add `file.txt` file into staged
 8. Do commit with message "initial commit"
-9. The commit must fail with messages in the console, like:
+9. The commit must fail with messages in the console which show that a forbidden signature was found, like:
 ```
 ...
-[ERROR]Signature 'some.netcracker.com' is found in
+Signature "NC-SUB-DOMAIN" found in file.txt at position 26
 ...
 [QUBERSHIP] Commit is not allowed
 ...

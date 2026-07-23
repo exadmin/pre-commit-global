@@ -22,3 +22,10 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# CyberFerret native runtime
+/cyberferret-dist/.cfcli-version
+/cyberferret-dist/.update-check.ts
+/cyberferret-dist/cfcli-linux-amd64
+/cyberferret-dist/cfcli-windows-amd64.exe
+/cyberferret-dist/cfcli-darwin-arm64

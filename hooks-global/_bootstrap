@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Restore Git for Windows tools when a caller provides a restricted PATH.
+GH_GIT_EXEC_PATH="$(git --exec-path 2>/dev/null)"
+case "$GH_GIT_EXEC_PATH" in
+  */mingw64/libexec/git-core)
+    GH_GIT_INSTALL_ROOT="${GH_GIT_EXEC_PATH%/mingw64/libexec/git-core}"
+    case "$GH_GIT_INSTALL_ROOT" in
+      [A-Za-z]:/*)
+        if [ -x "$GH_GIT_INSTALL_ROOT/usr/bin/cygpath.exe" ]; then
+          GH_GIT_INSTALL_ROOT="$(MSYS2_ARG_CONV_EXCL='*' \
+            "$GH_GIT_INSTALL_ROOT/usr/bin/cygpath.exe" -u "$GH_GIT_INSTALL_ROOT")"
+          GH_GIT_INSTALL_ROOT="${GH_GIT_INSTALL_ROOT%/}"
+        fi
+        ;;
+    esac
+
+    PATH="${GH_GIT_INSTALL_ROOT}/usr/bin:${GH_GIT_INSTALL_ROOT}/mingw64/bin:${PATH}"
+    export PATH
+    ;;
+esac

@@ -2,6 +2,7 @@
 #!/usr/bin/env bash
 # This file just calls "git pull" (if required) for the global hooks, then delegates logic into pre-commit-addon.
 GLOBAL_HOOKS_PATH=$(git config --global core.hooksPath)
+. "$GLOBAL_HOOKS_PATH/_bootstrap"
 
 # Define color codes
 CYAN='\033[0;36m'

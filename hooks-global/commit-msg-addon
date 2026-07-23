@@ -1,5 +1,8 @@
 #!/bin/sh
 
+GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
+. "$GLOBAL_HOOKS_PATH/_bootstrap"
+
 # Define color codes
 CYAN='\033[0;36m'
 ORANGE='\033[0;33m'
@@ -11,6 +14,100 @@ cprint() {
   COLOR="$1"
   MESSAGE="$2"
   echo -e "${PREFIX} ${COLOR}${MESSAGE}${NC}"
+}
+
+select_cfcli_asset() {
+  OS_NAME="$(uname -s)"
+  ARCH_NAME="$(uname -m)"
+
+  case "${OS_NAME}:${ARCH_NAME}" in
+    MINGW*:x86_64|MINGW*:amd64|MSYS*:x86_64|MSYS*:amd64|CYGWIN*:x86_64|CYGWIN*:amd64)
+      CFCLI_ASSET="cfcli-windows-amd64.exe"
+      ;;
+    Linux:x86_64|Linux:amd64)
+      CFCLI_ASSET="cfcli-linux-amd64"
+      ;;
+    Darwin:arm64|Darwin:aarch64)
+      CFCLI_ASSET="cfcli-darwin-arm64"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+should_check_for_update() {
+  if [ ! -f "$CFCLI_PATH" ] || [ ! -f "$UPDATE_CHECK_TIMESTAMP_PATH" ]; then
+    return 0
+  fi
+
+  LAST_UPDATE_CHECK="$(cat "$UPDATE_CHECK_TIMESTAMP_PATH" 2>/dev/null)"
+  case "$LAST_UPDATE_CHECK" in
+    ''|*[!0-9]*) return 0 ;;
+  esac
+
+  UPDATE_CHECK_AGE=$((CURRENT_TIME - LAST_UPDATE_CHECK))
+  if [ "$UPDATE_CHECK_AGE" -lt 0 ]; then
+    return 0
+  fi
+
+  [ "$UPDATE_CHECK_AGE" -ge "$UPDATE_CHECK_INTERVAL" ]
+}
+
+check_for_cfcli_update() {
+  cprint "${CYAN}" "Checking for a CyberFerret CLI update"
+  LATEST_RELEASE_JSON="$(curl --silent --show-error --fail --location \
+    --connect-timeout 5 --max-time 5 \
+    "https://api.github.com/repos/exadmin/CyberFerret/releases/latest")"
+  API_EXIT_CODE=$?
+
+  if ! printf '%s\n' "$CURRENT_TIME" > "$UPDATE_CHECK_TIMESTAMP_PATH"; then
+    cprint "${ORANGE}" "Cannot write CyberFerret update timestamp to ${UPDATE_CHECK_TIMESTAMP_PATH}"
+  fi
+
+  if [ "$API_EXIT_CODE" -ne 0 ]; then
+    cprint "${ORANGE}" "Cannot check the latest CyberFerret CLI release. Using the local executable if available."
+    return
+  fi
+
+  LATEST_VERSION="$(printf '%s\n' "$LATEST_RELEASE_JSON" |
+    sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
+    head -n 1)"
+  if [ -z "$LATEST_VERSION" ]; then
+    cprint "${ORANGE}" "The latest CyberFerret release has no readable tag. Using the local executable if available."
+    return
+  fi
+
+  LOCAL_VERSION=
+  if [ -f "$VERSION_PATH" ]; then
+    LOCAL_VERSION="$(cat "$VERSION_PATH" 2>/dev/null)"
+  fi
+
+  if [ -f "$CFCLI_PATH" ] && [ "$LOCAL_VERSION" = "$LATEST_VERSION" ]; then
+    cprint "${CYAN}" "CyberFerret CLI ${LATEST_VERSION} is up to date"
+    return
+  fi
+
+  CFCLI_TEMP_PATH="${CFCLI_PATH}.download.$$"
+  cprint "${CYAN}" "Downloading CyberFerret CLI ${LATEST_VERSION}"
+  if ! curl --silent --show-error --fail --location \
+    --output "$CFCLI_TEMP_PATH" \
+    "https://github.com/exadmin/CyberFerret/releases/latest/download/$CFCLI_ASSET"; then
+    rm -f "$CFCLI_TEMP_PATH"
+    cprint "${ORANGE}" "Cannot download CyberFerret CLI ${LATEST_VERSION}. Using the local executable if available."
+    return
+  fi
+
+  if ! chmod +x "$CFCLI_TEMP_PATH" || ! mv -f "$CFCLI_TEMP_PATH" "$CFCLI_PATH"; then
+    rm -f "$CFCLI_TEMP_PATH"
+    cprint "${ORANGE}" "Cannot install CyberFerret CLI at ${CFCLI_PATH}. Using the local executable if available."
+    return
+  fi
+
+  if ! printf '%s\n' "$LATEST_VERSION" > "$VERSION_PATH"; then
+    cprint "${ORANGE}" "Cannot write the installed CyberFerret version to ${VERSION_PATH}"
+  fi
+  cprint "${CYAN}" "CyberFerret CLI ${LATEST_VERSION} is installed"
 }
 
 REPO_PATH="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -77,9 +174,24 @@ else
           cprint "${ORANGE}" "Skip CyberFerret checks due to CyberFerret skip flag in commit message"
       else
           GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
-          JAR_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist/cyberferret-cli.jar"
-          if [ ! -f "$JAR_PATH" ]; then
-              cprint "${ORANGE}" "'cyberferret-cli.jar' is not found by path ${JAR_PATH}. Use provided version or compile manually from https://github.com/exadmin/CyberFerret."
+          DIST_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist"
+          if ! select_cfcli_asset; then
+              cprint "${RED}" "CyberFerret CLI does not support ${OS_NAME} on ${ARCH_NAME}"
+              exit 1
+          fi
+
+          CFCLI_PATH="${DIST_PATH}/${CFCLI_ASSET}"
+          VERSION_PATH="${DIST_PATH}/.cfcli-version"
+          UPDATE_CHECK_TIMESTAMP_PATH="${DIST_PATH}/.update-check.ts"
+          UPDATE_CHECK_INTERVAL=57600
+          CURRENT_TIME="$(date +%s)"
+
+          if should_check_for_update; then
+              check_for_cfcli_update
+          fi
+
+          if [ ! -f "$CFCLI_PATH" ]; then
+              cprint "${RED}" "CyberFerret CLI is unavailable at ${CFCLI_PATH}. The commit cannot be checked."
               exit 1
           fi
 
@@ -90,14 +202,13 @@ else
           else
               git diff --cached --name-only > "$TEMP_FILES_LIST"
           fi
-          CMD="java -cp \"$JAR_PATH\" com.github.exadmin.cyberferret.CyberFerretCLI \"$REPO_PATH\" \"$TEMP_FILES_LIST\""
-		  cprint "${CYAN}" "${CMD}"          
-          eval "$CMD"
+          cprint "${CYAN}" "Calling ${CFCLI_PATH} ${REPO_PATH} ${TEMP_FILES_LIST}"
+          "$CFCLI_PATH" --mode=quick "$REPO_PATH" "$TEMP_FILES_LIST"
           CMD_EXIT_CODE=$?
           if [ $CMD_EXIT_CODE -ne 0 ]; then
               cprint "${RED}" "Commit is not allowed"
-			  cprint "If you think this warning must be ignored once - use any of magic words '@cf_ignore, @cf_skip, @ignore_cf, @skip_cf' right in the commit message (any place)"
-			  cprint "If found signatures must be added to permanent ignores - use CyberFerret GUI app"
+              cprint "${CYAN}" "To ignore this warning once, add '@cf_ignore', '@cf_skip', '@ignore_cf', or '@skip_cf' anywhere in the commit message"
+              cprint "${CYAN}" "To ignore the detected signatures permanently, use the CyberFerret GUI application"
           fi
           exit $CMD_EXIT_CODE
       fi
