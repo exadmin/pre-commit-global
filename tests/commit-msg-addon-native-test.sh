@@ -204,7 +204,10 @@ test_platform() {
 
 run_platform_tests() {
   test_platform MINGW64_NT-10.0 x86_64 cfcli-windows-amd64.exe
+  test_platform MINGW64_NT-10.0 aarch64 cfcli-windows-arm64.exe
   test_platform Linux x86_64 cfcli-linux-amd64
+  test_platform Linux aarch64 cfcli-linux-arm64
+  test_platform Darwin x86_64 cfcli-darwin-amd64
   test_platform Darwin arm64 cfcli-darwin-arm64
 }
 
@@ -313,8 +316,14 @@ run_repository_tests() {
     fail "Expected .cfcli-state to be ignored"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-linux-amd64 ||
     fail "Expected Linux executable to be ignored"
+  git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-linux-arm64 ||
+    fail "Expected Linux ARM64 executable to be ignored"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-windows-amd64.exe ||
     fail "Expected Windows executable to be ignored"
+  git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-windows-arm64.exe ||
+    fail "Expected Windows ARM64 executable to be ignored"
+  git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-darwin-amd64 ||
+    fail "Expected macOS amd64 executable to be ignored"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/cfcli-darwin-arm64 ||
     fail "Expected macOS executable to be ignored"
 }

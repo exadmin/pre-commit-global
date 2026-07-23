@@ -24,8 +24,17 @@ select_cfcli_asset() {
     MINGW*:x86_64|MINGW*:amd64|MSYS*:x86_64|MSYS*:amd64|CYGWIN*:x86_64|CYGWIN*:amd64)
       CFCLI_ASSET="cfcli-windows-amd64.exe"
       ;;
+    MINGW*:arm64|MINGW*:aarch64|MSYS*:arm64|MSYS*:aarch64|CYGWIN*:arm64|CYGWIN*:aarch64)
+      CFCLI_ASSET="cfcli-windows-arm64.exe"
+      ;;
     Linux:x86_64|Linux:amd64)
       CFCLI_ASSET="cfcli-linux-amd64"
+      ;;
+    Linux:arm64|Linux:aarch64)
+      CFCLI_ASSET="cfcli-linux-arm64"
+      ;;
+    Darwin:x86_64|Darwin:amd64)
+      CFCLI_ASSET="cfcli-darwin-amd64"
       ;;
     Darwin:arm64|Darwin:aarch64)
       CFCLI_ASSET="cfcli-darwin-arm64"
