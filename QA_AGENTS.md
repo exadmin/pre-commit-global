@@ -97,6 +97,8 @@ as this exception.
 5. Stage `pass.txt`.
 6. Attempt to commit it: `git commit -m "adding pass.txt"`. The commit must fail.
 7. Delete `pass.txt`.
+8. Remove `pass.txt` from the Git index.
+9. Ensure that `pass.txt` is not staged.
 
 ### Test 6: Commit many files
 

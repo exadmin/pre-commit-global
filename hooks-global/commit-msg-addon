@@ -13,7 +13,7 @@ PREFIX="${CYAN}[QUBERSHIP]"
 cprint() {
   COLOR="$1"
   MESSAGE="$2"
-  echo -e "${PREFIX} ${COLOR}${MESSAGE}${NC}"
+  printf '%b\n' "${PREFIX} ${COLOR}${MESSAGE}${NC}"
 }
 
 select_cfcli_asset() {
@@ -249,6 +249,10 @@ else
       else
           GLOBAL_HOOKS_PATH="$(git config --global core.hooksPath)"
           DIST_PATH="${GLOBAL_HOOKS_PATH}/../cyberferret-dist"
+          if ! mkdir -p "$DIST_PATH"; then
+              cprint "${RED}" "Cannot create the CyberFerret distribution directory at ${DIST_PATH}. The commit cannot be checked."
+              exit 1
+          fi
           if ! select_cfcli_asset; then
               cprint "${RED}" "CyberFerret CLI does not support ${OS_NAME} on ${ARCH_NAME}"
               exit 1

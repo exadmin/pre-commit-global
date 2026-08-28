@@ -213,6 +213,13 @@ run_platform_tests() {
 
 run_update_tests() {
   setup_scenario
+  rmdir "$DIST_PATH"
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  assert_file_exists "$DIST_PATH/cfcli-linux-amd64"
+  assert_file_contains "$DIST_PATH/.cfcli-state" "cfcli-linux-amd64.update_check=$TEST_NOW"
+
+  setup_scenario
   install_existing_executable cfcli-linux-amd64
   write_update_timestamp cfcli-linux-amd64 "$((TEST_NOW - 1))"
   run_hook
