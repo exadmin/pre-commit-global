@@ -26,12 +26,20 @@ as this exception.
 
 0. Check that the `CYBER_FERRET_PASSWORD` environment variable is set and is not empty.
 1. Go to the system temporary directory.
-2. Create a directory named `pre-commit-global-qa-?`, where `?` is a number that makes the directory name unique. If
+2. Create a directory named `tmp-git-global-hooks-?`, where `?` is a number that makes the direcory name unique.
+3. Copy `hooks-global/*.*` content into that `tmp-git-global-hooks-?/*.*` folder
+4. Remember current git global hook directory value (to restore it after test is completed)
+5. Set `tmp-git-global-hooks-?` as a new global hook directory.
+6. Important note! When any test is failed, or completed succussfully - restore original global hook value. 
+If it was emty - restore empty (drop temp value)
+
+### Preparing initial files
+1. Create a directory named `pre-commit-global-qa-?`, where `?` is a number that makes the directory name unique. If
    the directory already exists, increment the number until the name is unique.
-3. Go to the new `pre-commit-global-qa-?` directory. This directory is the working directory.
-4. Initialize a Git repository there.
-5. Create an empty initial commit to ensure that `HEAD` exists: `git commit --allow-empty -m "init"`.
-6. Create `.qubership/grand-report.json`, including its parent directory, with exactly this content:
+2. Go to the new `pre-commit-global-qa-?` directory. This directory is the working directory.
+3. Initialize a Git repository there.
+4. Create an empty initial commit to ensure that `HEAD` exists: `git commit --allow-empty -m "init"`.
+5. Create `.qubership/grand-report.json`, including its parent directory, with exactly this content:
 
    ```json
    {}

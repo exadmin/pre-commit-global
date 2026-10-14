@@ -1,0 +1,54 @@
+#!/bin/sh
+
+. "$GLOBAL_HOOKS_PATH/_bootstrap"
+
+# Define color codes
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color (reset)
+PREFIX="${CYAN}[QUBERSHIP]"
+
+cprint() {
+    COLOR="$1"
+    MESSAGE="$2"
+    printf '%b\n' "${PREFIX} ${COLOR}${MESSAGE}${NC}"
+}
+
+# Check if GLOBAL_HOOKS_PATH is empty
+if [ -z "$GLOBAL_HOOKS_PATH" ]; then
+    cprint "${CYAN}" "Error: Global hooks path is not configured."
+    cprint "${CYAN}" "Set up global hooks using: git config --global core.hooksPath <path>"
+    cprint "${CYAN}" "Alternatively, follow the README.md installation instructions at https://github.com/exadmin/pre-commit-global"
+    exit 1
+fi
+
+# Call GlobalHooks git update if 4 hours passed since last update
+REPO_PATH="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$REPO_PATH" ] && [ -f "$REPO_PATH/.qubership/grand-report.json" ]; then
+    TIMESTAMP_FILE="$GLOBAL_HOOKS_PATH/.last_pull_timestamp"
+    CURRENT_TIME=$(date +%s)
+    PULL_INTERVAL=14400  # 4 hours in seconds
+
+    if [ -f "$TIMESTAMP_FILE" ]; then
+        LAST_PULL_TIME=$(cat "$TIMESTAMP_FILE")
+        TIME_DIFF=$((CURRENT_TIME - LAST_PULL_TIME))
+
+        if [ $TIME_DIFF -lt $PULL_INTERVAL ]; then
+            # echo "Skipping git pull - last pull was less than 30 minutes ago"
+            SKIP_PULL=true
+        fi
+    fi
+
+    # Run git pull if required
+    if [ -z "$SKIP_PULL" ]; then
+        # todo: support case when network service is not available
+        if env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git -C "$GLOBAL_HOOKS_PATH" pull --ff-only; then
+            cprint "${CYAN}" "Global hooks updated successfully"
+            cat > "$TIMESTAMP_FILE" <<EOF
+$CURRENT_TIME
+EOF
+        else
+            cprint "${CYAN}" "Warning: Failed to update global hooks"
+        fi
+    fi
+
+fi
