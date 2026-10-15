@@ -45,6 +45,77 @@ select_cfcli_asset() {
   esac
 }
 
+read_cfcli_properties() {
+  PROPERTIES_PATH="$1"
+  PINNED_VERSION=
+  PINNED_SHA=
+  [ -f "$PROPERTIES_PATH" ] && [ -r "$PROPERTIES_PATH" ] || return 1
+  while IFS= read -r PROPERTY_LINE || [ -n "$PROPERTY_LINE" ]; do
+    PROPERTY_LINE="$(printf '%s' "$PROPERTY_LINE" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    case "$PROPERTY_LINE" in
+      ''|'#'*|'!'*) continue ;;
+      *=*) ;;
+      *) return 1 ;;
+    esac
+    PROPERTY_KEY="$(printf '%s' "${PROPERTY_LINE%%=*}" | sed 's/[[:space:]]*$//')"
+    PROPERTY_VALUE="$(printf '%s' "${PROPERTY_LINE#*=}" | sed 's/^[[:space:]]*//')"
+    case "$PROPERTY_KEY" in
+      version)
+        [ -z "$PINNED_VERSION" ] || return 1
+        PINNED_VERSION="$PROPERTY_VALUE"
+        ;;
+      version-sha256)
+        [ -z "$PINNED_SHA" ] || return 1
+        PINNED_SHA="$PROPERTY_VALUE"
+        ;;
+      '') return 1 ;;
+    esac
+  done < "$PROPERTIES_PATH" || return 1
+  case "$PINNED_VERSION" in
+    ''|.|..|*[!a-zA-Z0-9._-]*) return 1 ;;
+  esac
+  PINNED_SHA="${PINNED_SHA#sha256:}"
+  [ "${#PINNED_SHA}" -eq 64 ] || return 1
+  case "$PINNED_SHA" in *[!a-fA-F0-9]*) return 1 ;; esac
+  PINNED_SHA="$(printf '%s' "$PINNED_SHA" | tr 'A-F' 'a-f')"
+}
+
+verify_cfcli_sha() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL_SHA="$(sha256sum "$1")" || return 1
+  elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL_SHA="$(shasum -a 256 "$1")" || return 1
+  else
+    return 1
+  fi
+  ACTUAL_SHA="${ACTUAL_SHA%% *}"
+  [ "$ACTUAL_SHA" = "$PINNED_SHA" ]
+}
+
+prepare_pinned_cfcli() {
+  [ -n "$HOME" ] || return 1
+  PINNED_DIR="$HOME/.qubership/cfcli/$PINNED_VERSION"
+  mkdir -p "$PINNED_DIR" || return 1
+  PINNED_DIR="$(CDPATH= cd -- "$PINNED_DIR" && pwd -P)" || return 1
+  PINNED_PATH="$PINNED_DIR/$CFCLI_ASSET"
+  if [ -f "$PINNED_PATH" ] && verify_cfcli_sha "$PINNED_PATH"; then
+    chmod +x "$PINNED_PATH" || return 1
+  else
+    PINNED_TEMP_PATH="${PINNED_PATH}.download.$$"
+    cprint "${CYAN}" "Downloading CyberFerret CLI ${PINNED_VERSION}"
+    if ! curl --silent --show-error --fail --location \
+      --connect-timeout 5 --max-time 120 --output "$PINNED_TEMP_PATH" \
+      "https://github.com/exadmin/CyberFerret/releases/download/$PINNED_VERSION/$CFCLI_ASSET" ||
+      ! verify_cfcli_sha "$PINNED_TEMP_PATH" ||
+      ! chmod +x "$PINNED_TEMP_PATH" || ! mv -f "$PINNED_TEMP_PATH" "$PINNED_PATH"; then
+      rm -f "$PINNED_TEMP_PATH"
+      return 1
+    fi
+  fi
+  CFCLI_PATH="$PINNED_PATH"
+  SELECTED_VERSION="$PINNED_VERSION"
+}
+
 read_cfcli_state_value() {
   STATE_KEY="$1"
   CFCLI_STATE_VALUE=
@@ -265,8 +336,32 @@ else
           UPDATE_CHECK_INTERVAL=57600
           CURRENT_TIME="$(date +%s)"
 
-          if should_check_for_update; then
-              check_for_cfcli_update
+          PIN_SELECTED=false
+          SELECTION_REASON="Using latest-release selection because neither configuration specifies a valid version."
+          PIN_CONFIG_FOUND=false
+          if read_cfcli_properties "$REPO_PATH/.qubership/cfcli.properties"; then
+              PIN_CONFIG_FOUND=true
+              SELECTION_REASON="Version specified in the repository's .qubership/cfcli.properties."
+          elif read_cfcli_properties "$HOME/.qubership/cfcli.properties"; then
+              PIN_CONFIG_FOUND=true
+              SELECTION_REASON="Version specified in ~/.qubership/cfcli.properties; no valid repository override found."
+          fi
+          if [ "$PIN_CONFIG_FOUND" = true ]; then
+              if prepare_pinned_cfcli; then
+                  PIN_SELECTED=true
+              else
+                  SELECTION_REASON="Using latest-release selection because the specified version could not be downloaded, verified, or installed at the moment."
+                  cprint "${ORANGE}" "Cannot prepare CyberFerret CLI ${PINNED_VERSION}. Falling back to latest."
+              fi
+          fi
+          if [ "$PIN_SELECTED" = false ]; then
+              if should_check_for_update; then
+                  check_for_cfcli_update
+              fi
+              SELECTED_VERSION=unknown
+              if read_cfcli_state_value "$VERSION_STATE_KEY"; then
+                  SELECTED_VERSION="$CFCLI_STATE_VALUE"
+              fi
           fi
 
           if [ ! -f "$CFCLI_PATH" ]; then
@@ -281,6 +376,10 @@ else
           else
               git diff --cached --name-only > "$TEMP_FILES_LIST"
           fi
+          CFCLI_DIRECTORY="$(CDPATH= cd -- "$(dirname "$CFCLI_PATH")" && pwd -P)"
+          CFCLI_PATH="$CFCLI_DIRECTORY/$CFCLI_ASSET"
+          cprint "${CYAN}" "Using CyberFerret CLI ${SELECTED_VERSION}: ${CFCLI_PATH}"
+          cprint "${CYAN}" "Reason: ${SELECTION_REASON}"
           cprint "${CYAN}" "Calling ${CFCLI_PATH} ${REPO_PATH} ${TEMP_FILES_LIST}"
           "$CFCLI_PATH" --mode=quick "$REPO_PATH" "$TEMP_FILES_LIST"
           CMD_EXIT_CODE=$?

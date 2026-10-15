@@ -228,7 +228,7 @@ If it was emty - restore empty (drop temp value)
 
    ```text
    ...
-   Signature "NC-SUB-DOMAIN" found in file.txt at position 26
+   JSON: {"type":"found","key":"NC-SUB-DOMAIN","found":"some.netcracker.com","line":2,"file":"file.txt"}
    ...
    [QUBERSHIP] Commit is not allowed
    ...
@@ -305,3 +305,21 @@ If it was emty - restore empty (drop temp value)
 32. Ensure that `self-update-marker.txt` is not staged in `USER_REPO`.
 33. Restore the global `core.hooksPath` setting to the exact value and configured or unconfigured state saved in
     step 2.
+
+
+### Test11 - check exact cfcli-revision is used
+1. Create new unique folder `REPO-X`
+2. Initialize it as git empty repository
+3. Create `.qubership/grand-report.json` file with content:
+```json
+{
+}
+```
+4. Create `.qubership/cfcli.properties` file in it with content:
+```properties
+version=v2.1.2
+version-sha256=649a4f559c1ce076e4c5e44909ccabfa8ab2d96fbd6e7b67b9e1b6beb09571e0
+```
+4. Create new file "test.txt" in the repo and commit it using message "feat: test"
+5. Analyze logs during commit phase. There should messages like: [QUBERSHIP] Using CyberFerret CLI v2.1.2.
+

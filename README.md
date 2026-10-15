@@ -59,6 +59,47 @@ when needed and checks for a newer release at most once every 16 hours. If the u
 continues with the installed executable. Update timestamps and installed versions are tracked separately for each
 platform asset in `cyberferret-dist/.cfcli-state`.
 
+#### Pin the CyberFerret CLI version
+
+To pin a specific release, create `.qubership/cfcli.properties` in the repository root and commit it:
+
+```properties
+version=v1.2.3
+version-sha256=<SHA-256 of the release binary for your platform>
+```
+
+Replace `v1.2.3` with the exact release tag and the hash placeholder with the SHA-256 of the binary for your OS and
+architecture. Both properties are required. `version` selects a release tag, rather than a Git commit SHA.
+The `version-sha256` value accepts 64 hexadecimal characters, with or without the `sha256:` prefix:
+
+```properties
+version=v1.2.3
+version-sha256=sha256:<SHA-256 of the release binary for your platform>
+```
+
+To set a personal default for repositories, put the same settings in `~/.qubership/cfcli.properties`.
+The hook selects a version in this order:
+
+1. Use `.qubership/cfcli.properties` from the repository if it is valid.
+2. If the repository file is missing, unreadable, or invalid, use `~/.qubership/cfcli.properties` if it is valid.
+3. If neither file is valid, use the latest-release update behavior described above.
+
+Blank lines, `#` or `!` comments, surrounding whitespace, and Windows line endings are supported. Duplicate required
+properties and lines without `=` are invalid. Tags can contain ASCII letters, digits, dots, underscores, and hyphens,
+but cannot be `.` or `..`. The hash must match the platform binary: binaries for different platforms have different
+hashes, so one pinned configuration cannot validate binaries for multiple platforms.
+
+Pinned binaries are cached in `~/.qubership/cfcli/<tag>/<platform-asset>`, shared across repositories. The hook checks
+the SHA-256 before each use and downloads the tagged release if the cached binary is missing or fails verification.
+SHA-256 verification requires `sha256sum` or `shasum`. If downloading, verifying, or installing a pinned binary fails,
+the hook falls back directly to the existing latest-release behavior. It does not try the personal default after a
+valid repository pin fails to download or pass verification. A scanner failure still blocks the commit.
+
+The hook prints the selected version, the full path of the binary it runs, and a `Reason:` line explaining whether
+the version came from the repository settings, personal settings, or latest-release fallback. The latest-release
+cache remains in `cyberferret-dist`; its version is reported as `unknown` if its state file has no version entry.
+To return a repository to latest-release selection, remove its pin and any personal default that would apply.
+
 ### Install global hooks manually
 
 The registration scripts configure the cloned repository's `hooks-global` directory as Git's global hooks path. Keep

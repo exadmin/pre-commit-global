@@ -129,6 +129,9 @@ setup_scenario() {
   HOOK_OUTPUT="$SCENARIO_ROOT/hook-output.log"
   MESSAGE_PATH="$REPO_PATH/commit-message.txt"
   GIT_CONFIG_GLOBAL="$SCENARIO_ROOT/gitconfig"
+  HOME="$SCENARIO_ROOT/home"
+  mkdir -p "$HOME/.qubership"
+  export HOME
 
   mkdir -p "$HOOKS_PATH" "$DIST_PATH" "$REPO_PATH/.qubership"
   cp "$PROJECT_ROOT/hooks-global/commit-msg-addon" "$HOOKS_PATH/commit-msg-addon"
@@ -313,6 +316,89 @@ run_fallback_tests() {
   assert_file_not_exists "$TEST_CURL_LOG"
 }
 
+write_pin() {
+  printf 'version=%s\nversion-sha256=%s\n' "$2" "$3" > "$1"
+}
+
+run_pinned_tests() {
+  setup_scenario
+  EXPECTED_SHA="$(sha256sum "$TEST_DOWNLOAD_SOURCE" | cut -d ' ' -f 1)"
+  write_pin "$REPO_PATH/.qubership/cfcli.properties" v1.2.3 "$EXPECTED_SHA"
+  write_pin "$HOME/.qubership/cfcli.properties" v9.0.0 "$EXPECTED_SHA"
+  run_hook
+  assert_equals "$HOOK_EXIT" 0
+  PIN_PATH="$HOME/.qubership/cfcli/v1.2.3/cfcli-linux-amd64"
+  assert_file_exists "$PIN_PATH"
+  assert_file_contains "$TEST_CURL_LOG" 'releases/download/v1.2.3/cfcli-linux-amd64'
+  assert_equals "$(wc -l < "$TEST_CURL_LOG" | tr -d ' ')" 1
+  assert_file_contains "$HOOK_OUTPUT" "Using CyberFerret CLI v1.2.3: $PIN_PATH"
+  assert_file_contains "$HOOK_OUTPUT" "Reason: Version specified in the repository's .qubership/cfcli.properties."
+  rm "$TEST_CURL_LOG"
+  write_pin "$REPO_PATH/.qubership/cfcli.properties" v1.2.3 "sha256:$EXPECTED_SHA"
+  run_hook
+  assert_equals "$HOOK_EXIT" 0
+  assert_file_not_exists "$TEST_CURL_LOG"
+  TEST_CFCLI_EXIT=23
+  export TEST_CFCLI_EXIT
+  run_hook
+  assert_equals "$HOOK_EXIT" 23
+  assert_file_not_exists "$TEST_CURL_LOG"
+  TEST_CFCLI_EXIT=0
+  export TEST_CFCLI_EXIT
+  printf 'corrupt\n' > "$PIN_PATH"
+  run_hook
+  assert_equals "$HOOK_EXIT" 0
+  assert_file_contains "$TEST_CURL_LOG" 'releases/download/v1.2.3/'
+
+  for CONFIG_CASE in missing malformed incomplete traversal duplicate invalid-sha invalid-prefixed-sha; do
+    setup_scenario
+    EXPECTED_SHA="$(sha256sum "$TEST_DOWNLOAD_SOURCE" | cut -d ' ' -f 1)"
+    case "$CONFIG_CASE" in
+      malformed) printf 'invalid line\n' > "$REPO_PATH/.qubership/cfcli.properties" ;;
+      incomplete) printf 'version=v1\n' > "$REPO_PATH/.qubership/cfcli.properties" ;;
+      traversal) write_pin "$REPO_PATH/.qubership/cfcli.properties" ../outside "$EXPECTED_SHA" ;;
+      duplicate) printf 'version=v1\nversion=v2\n' > "$REPO_PATH/.qubership/cfcli.properties" ;;
+      invalid-sha) write_pin "$REPO_PATH/.qubership/cfcli.properties" v1 not-a-hash ;;
+      invalid-prefixed-sha) write_pin "$REPO_PATH/.qubership/cfcli.properties" v1 sha256:not-a-hash ;;
+    esac
+    printf '# Global pin\r\n version = v3.0.0\r\n version-sha256 = sha256:%s\r\n' "$EXPECTED_SHA" > "$HOME/.qubership/cfcli.properties"
+    run_hook
+    assert_equals "$HOOK_EXIT" 0
+    assert_file_exists "$HOME/.qubership/cfcli/v3.0.0/cfcli-linux-amd64"
+    assert_file_contains "$HOOK_OUTPUT" 'Reason: Version specified in ~/.qubership/cfcli.properties; no valid repository override found.'
+    assert_equals "$(wc -l < "$TEST_CURL_LOG" | tr -d ' ')" 1
+  done
+
+  setup_scenario
+  printf 'invalid\n' > "$HOME/.qubership/cfcli.properties"
+  run_hook
+  assert_equals "$HOOK_EXIT" 0
+  assert_file_contains "$HOOK_OUTPUT" 'Reason: Using latest-release selection because neither configuration specifies a valid version.'
+  assert_file_contains "$TEST_CURL_LOG" 'releases/latest/download/'
+
+  setup_scenario
+  write_pin "$REPO_PATH/.qubership/cfcli.properties" v1 "$(printf '%064d' 0)"
+  run_hook
+  assert_equals "$HOOK_EXIT" 0
+  assert_file_not_exists "$HOME/.qubership/cfcli/v1/cfcli-linux-amd64"
+  assert_file_contains "$TEST_CURL_LOG" 'releases/latest/download/'
+  assert_file_contains "$HOOK_OUTPUT" 'Falling back to latest'
+  assert_file_contains "$HOOK_OUTPUT" 'Reason: Using latest-release selection because the specified version could not be downloaded, verified, or installed at the moment.'
+
+  setup_scenario
+  EXPECTED_SHA="$(sha256sum "$TEST_DOWNLOAD_SOURCE" | cut -d ' ' -f 1)"
+  write_pin "$REPO_PATH/.qubership/cfcli.properties" v1 "$EXPECTED_SHA"
+  install_existing_executable cfcli-linux-amd64
+  write_update_timestamp cfcli-linux-amd64 "$TEST_NOW"
+  TEST_DOWNLOAD_FAIL=1
+  export TEST_DOWNLOAD_FAIL
+  run_hook
+  assert_equals "$HOOK_EXIT" 0
+  assert_file_contains "$TEST_CFCLI_LOG" existing
+  assert_file_contains "$HOOK_OUTPUT" 'Using CyberFerret CLI v1.0.0:'
+  assert_file_contains "$HOOK_OUTPUT" 'Reason: Using latest-release selection because the specified version could not be downloaded, verified, or installed at the moment.'
+}
+
 run_repository_tests() {
   assert_file_not_exists "$PROJECT_ROOT/cyberferret-dist/cyberferret-cli.jar"
   git -C "$PROJECT_ROOT" check-ignore -q cyberferret-dist/.cfcli-version ||
@@ -341,11 +427,13 @@ case "$GROUP" in
   update) run_update_tests ;;
   fallback) run_fallback_tests ;;
   repository) run_repository_tests ;;
+  pinned) run_pinned_tests ;;
   all)
     run_platform_tests
     run_update_tests
     run_fallback_tests
     run_repository_tests
+    run_pinned_tests
     ;;
   *) fail "Unknown test group: $GROUP" ;;
 esac
