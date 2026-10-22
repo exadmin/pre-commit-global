@@ -97,6 +97,8 @@ EOF
 #!/bin/sh
 if [ "${1:-}" = "--exec-path" ]; then
   printf '%s\n' "/usr/lib/git-core"
+elif [ "${3:-}" = "diff" ] && [ "${TEST_DIFF_FAIL:-0}" = "1" ]; then
+  exit 1
 else
   exec "$TEST_REAL_GIT" "$@"
 fi
@@ -111,6 +113,9 @@ write_native_executable() {
   cat > "$TARGET_PATH" <<EOF
 #!/bin/sh
 printf '%s\n' '$MARKER' "\$1" "\$2" "\$3" >> "\$TEST_CFCLI_LOG"
+PATCH_RELATIVE="\$(cat "\$3")"
+git -C "\$2" ls-files --others --exclude-standard -- "\$PATCH_RELATIVE" > "\$TEST_CFCLI_LOG.eligible"
+cp "\$2/\$PATCH_RELATIVE" "\$TEST_CFCLI_LOG.patch"
 exit "\${TEST_CFCLI_EXIT:-0}"
 EOF
   chmod +x "$TARGET_PATH"
@@ -158,10 +163,12 @@ setup_scenario() {
   TEST_API_FAIL=0
   TEST_DOWNLOAD_FAIL=0
   TEST_CFCLI_EXIT=0
+  TEST_DIFF_FAIL=0
   TEST_REAL_GIT="$(command -v git)"
 
   export GIT_CONFIG_GLOBAL TEST_UNAME_S TEST_UNAME_M TEST_NOW TEST_API_RESPONSE
   export TEST_API_FAIL TEST_DOWNLOAD_FAIL TEST_CFCLI_EXIT
+  export TEST_DIFF_FAIL
   export TEST_CURL_LOG TEST_CFCLI_LOG TEST_DOWNLOAD_SOURCE TEST_REAL_GIT
 }
 
@@ -306,7 +313,8 @@ run_fallback_tests() {
   assert_file_contains "$HOOK_OUTPUT" "Commit is not allowed"
   assert_file_contains "$TEST_CFCLI_LOG" "--mode=quick"
   assert_file_contains "$TEST_CFCLI_LOG" "$EXPECTED_REPO_PATH"
-  assert_file_contains "$TEST_CFCLI_LOG" "$EXPECTED_REPO_PATH/.git/cf_files.list"
+  assert_file_contains "$TEST_CFCLI_LOG" "$EXPECTED_REPO_PATH/cf-scan."
+  assert_file_contains "$TEST_CFCLI_LOG" "/files.list"
 
   setup_scenario
   TEST_UNAME_M=riscv64
@@ -421,6 +429,65 @@ run_repository_tests() {
     fail "Expected macOS executable to be ignored"
 }
 
+run_diff_tests() {
+  setup_scenario
+  install_existing_executable cfcli-linux-amd64
+  write_update_timestamp cfcli-linux-amd64 "$TEST_NOW"
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  assert_file_contains "$TEST_CFCLI_LOG.patch" "changed"
+  assert_file_contains "$TEST_CFCLI_LOG.eligible" "/temp.patch"
+  SCAN_LIST="$(tail -n 1 "$TEST_CFCLI_LOG")"
+  assert_file_not_exists "$(dirname "$SCAN_LIST")"
+
+  # The index holds the replacement; the working tree holds an unrelated value.
+  git -C "$REPO_PATH" -c core.hooksPath=/dev/null commit -qm initial
+  printf 'email@example.com\nunchanged-context\nremoved-value\n' > "$REPO_PATH/changed.txt"
+  git -C "$REPO_PATH" add changed.txt
+  git -C "$REPO_PATH" -c core.hooksPath=/dev/null commit -qm baseline
+  printf 'test@example.org\nunchanged-context\n+++literal\n' > "$REPO_PATH/changed.txt"
+  git -C "$REPO_PATH" add changed.txt
+  printf 'unstaged-value\n' > "$REPO_PATH/changed.txt"
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  EXPECTED_ADDITIONS="$(printf 'test@example.org\n+++literal')"
+  assert_equals "$(cat "$TEST_CFCLI_LOG.patch")" "$EXPECTED_ADDITIONS"
+
+  git -C "$REPO_PATH" reset -q HEAD -- changed.txt
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  assert_equals "$(cat "$TEST_CFCLI_LOG.patch")" ""
+
+  git -C "$REPO_PATH" rm -q -f changed.txt
+  run_hook
+  assert_equals "$HOOK_EXIT" "0"
+  assert_equals "$(cat "$TEST_CFCLI_LOG.patch")" ""
+
+  printf 'cf-scan.*/\n' > "$REPO_PATH/.gitignore"
+  rm -f "$TEST_CFCLI_LOG"
+  run_hook
+  assert_equals "$HOOK_EXIT" "1"
+  assert_file_not_exists "$TEST_CFCLI_LOG"
+  assert_file_contains "$HOOK_OUTPUT" "Git ignore rules hide"
+
+  rm -f "$REPO_PATH/.gitignore"
+  printf 'cf-scan.*/\n' > "$HOME/.gitignore_global"
+  run_hook
+  assert_equals "$HOOK_EXIT" "1"
+  assert_file_not_exists "$TEST_CFCLI_LOG"
+  rm -f "$HOME/.gitignore_global"
+
+  TEST_DIFF_FAIL=1
+  export TEST_DIFF_FAIL
+  run_hook
+  assert_equals "$HOOK_EXIT" "1"
+  assert_file_not_exists "$TEST_CFCLI_LOG"
+  assert_file_contains "$HOOK_OUTPUT" "Cannot read staged changes"
+  for SCAN_DIRECTORY in "$REPO_PATH"/cf-scan.*; do
+    assert_file_not_exists "$SCAN_DIRECTORY"
+  done
+}
+
 GROUP="${1:-all}"
 case "$GROUP" in
   platform) run_platform_tests ;;
@@ -428,12 +495,14 @@ case "$GROUP" in
   fallback) run_fallback_tests ;;
   repository) run_repository_tests ;;
   pinned) run_pinned_tests ;;
+  diff) run_diff_tests ;;
   all)
     run_platform_tests
     run_update_tests
     run_fallback_tests
     run_repository_tests
     run_pinned_tests
+    run_diff_tests
     ;;
   *) fail "Unknown test group: $GROUP" ;;
 esac

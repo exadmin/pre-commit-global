@@ -369,12 +369,48 @@ else
               exit 1
           fi
 
-          TEMP_FILES_LIST="${GIT_WORKTREE_DIR}/cf_files.list"
-          # trap 'rm -f "$TEMP_FILES_LIST"' EXIT HUP INT TERM
-          if git rev-parse --verify HEAD >/dev/null 2>&1; then
-              git diff HEAD --name-only > "$TEMP_FILES_LIST"
-          else
-              git diff --cached --name-only > "$TEMP_FILES_LIST"
+          TEMP_SCAN_DIR="$(mktemp -d "$REPO_PATH/cf-scan.XXXXXX")" || {
+              cprint "${RED}" "Cannot create temporary scan files. The commit cannot be checked."
+              exit 1
+          }
+          trap '
+              rm -f "$TEMP_SCAN_DIR/temp.patch" "$TEMP_SCAN_DIR/source.patch" \
+                  "$TEMP_SCAN_DIR/files.list" "$TEMP_SCAN_DIR/eligible.list"
+              rmdir "$TEMP_SCAN_DIR"
+          ' EXIT
+          trap 'exit 1' HUP INT TERM
+          TEMP_PATCH="$TEMP_SCAN_DIR/temp.patch"
+          TEMP_FILES_LIST="$TEMP_SCAN_DIR/files.list"
+          if ! git -C "$REPO_PATH" diff --cached --no-ext-diff --no-textconv --no-color --unified=0 > "$TEMP_SCAN_DIR/source.patch"; then
+              cprint "${RED}" "Cannot read staged changes. The commit cannot be checked."
+              exit 1
+          fi
+          if ! awk '
+              /^diff --git / { in_hunk = 0; next }
+              /^@@ / { in_hunk = 1; next }
+              in_hunk && /^\+/ { print substr($0, 2) }
+          ' "$TEMP_SCAN_DIR/source.patch" > "$TEMP_PATCH"; then
+              cprint "${RED}" "Cannot extract staged additions. The commit cannot be checked."
+              exit 1
+          fi
+          TEMP_PATCH_RELATIVE="${TEMP_SCAN_DIR##*/}/temp.patch"
+          if ! printf '%s\n' "$TEMP_PATCH_RELATIVE" > "$TEMP_FILES_LIST"; then
+              cprint "${RED}" "Cannot write the scan file list. The commit cannot be checked."
+              exit 1
+          fi
+          # Native Windows cfcli resolves its home through USERPROFILE rather than HOME.
+          CFCLI_HOME="$HOME"
+          case "$OS_NAME" in
+              MINGW*|MSYS*|CYGWIN*) CFCLI_HOME="${USERPROFILE:-$HOME}" ;;
+          esac
+          set -- ls-files --others --exclude-standard
+          if [ -f "$CFCLI_HOME/.gitignore_global" ]; then
+              set -- "$@" "--exclude-from=$CFCLI_HOME/.gitignore_global"
+          fi
+          if ! git -C "$REPO_PATH" "$@" -- "$TEMP_PATCH_RELATIVE" > "$TEMP_SCAN_DIR/eligible.list" ||
+              ! grep -Fx -- "$TEMP_PATCH_RELATIVE" "$TEMP_SCAN_DIR/eligible.list" >/dev/null; then
+              cprint "${RED}" "Git ignore rules hide the temporary scan file. The commit cannot be checked."
+              exit 1
           fi
           CFCLI_DIRECTORY="$(CDPATH= cd -- "$(dirname "$CFCLI_PATH")" && pwd -P)"
           CFCLI_PATH="$CFCLI_DIRECTORY/$CFCLI_ASSET"

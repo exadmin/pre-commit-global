@@ -24,6 +24,8 @@ as this exception.
 
 ### Preparing for testing
 
+Run all tests with `-v` unless a test explicitly states otherwise.
+
 0. Check that the `CYBER_FERRET_PASSWORD` environment variable is set and is not empty.
 1. Go to the system temporary directory.
 2. Create a directory named `tmp-git-global-hooks-?`, where `?` is a number that makes the direcory name unique.
@@ -107,6 +109,18 @@ If it was emty - restore empty (drop temp value)
 7. Delete `pass.txt`.
 8. Remove `pass.txt` from the Git index.
 9. Ensure that `pass.txt` is not staged.
+
+#### Added lines and partial staging
+
+1. In a disposable repository, commit a file with a known dictionary signature by using `@skip_cf`.
+2. Add a harmless line elsewhere in the file and stage the change. Ensure that the commit succeeds without a skip flag.
+3. Replace a harmless line with a known dictionary signature and stage it. Restore harmless text only in the working
+   tree. Ensure that the commit fails because the signature remains in the index.
+4. Stage harmless text, then add a signature only in the working tree. Ensure that the commit succeeds.
+5. Delete a line containing a signature and stage the deletion. Ensure that the deletion does not trigger a finding.
+6. After both successful and rejected checks, ensure that no temporary `cf-scan.*` directory remains in the repository.
+
+Findings name the temporary `temp.patch` file. Original file paths and line numbers are not preserved.
 
 ### Test 6: Commit many files
 
@@ -202,7 +216,7 @@ If it was emty - restore empty (drop temp value)
 13. Ensure that the commit succeeds.
 14. Ensure that no entries other than `ttt.txt`, `hello.txt`, `.qubership/grand-report.json`, and `.git` exist in the
     `REPO2` directory.
-15. Ensure that `REPO1/.git/worktrees/<REPO2-directory-name>/cf_files.list` exists and contains exactly `ttt.txt`.
+15. Ensure that no temporary cf-scan.* directories remain in REPO2 after the commit
 
 ### Test 8: Check that multiple signatures can be found in the same file
 

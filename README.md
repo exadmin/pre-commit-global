@@ -59,6 +59,20 @@ when needed and checks for a newer release at most once every 16 hours. If the u
 continues with the installed executable. Update timestamps and installed versions are tracked separately for each
 platform asset in `cyberferret-dist/.cfcli-state`.
 
+#### Staged changes
+
+The commit hook extracts added lines from `git diff --cached --unified=0` and scans them with the existing cfcli
+`--mode=quick`. For a replacement, it scans the entire new line. Deleted lines, unchanged context, and unstaged
+changes are omitted. This also works before the first commit.
+
+The hook creates a temporary directory named `cf-scan.XXXXXX` inside the repository and passes only its `temp.patch`
+file to cfcli through a file list. It removes the directory after the check, including when cfcli rejects the commit.
+If Git ignore rules hide the scan file, the hook stops the commit instead of silently skipping the scan.
+
+Findings refer to the temporary file and its line numbers. Original file and extension exclusions do not carry over
+to the extracted text. Added lines from separate blocks and files are concatenated, so multiline signatures can match
+across their boundaries. Binary changes contain no added text lines and are not analyzed by this check.
+
 #### Pin the CyberFerret CLI version
 
 To pin a specific release, create `.qubership/cfcli.properties` in the repository root and commit it:
