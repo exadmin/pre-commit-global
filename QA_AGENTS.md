@@ -30,6 +30,12 @@ Run all tests with `-v` unless a test explicitly states otherwise.
 1. Go to the system temporary directory.
 2. Create a directory named `tmp-git-global-hooks-?`, where `?` is a number that makes the direcory name unique.
 3. Copy `hooks-global/*.*` content into that `tmp-git-global-hooks-?/*.*` folder
+   Whenever hook sources are copied into a temporary global hooks directory, also create
+   `.last_pull_timestamp` inside that temporary directory with the current Unix timestamp (seconds since the epoch).
+   For example, on Linux/macOS: `date +%s > "<temporary-hooks-directory>/.last_pull_timestamp"`.
+   This prevents automatic hook updates during tests that do not test self-update behavior.
+   Write only to the temporary copy; do not change the marker in the original global hooks directory.
+   Tests that explicitly exercise self-update must still reset their temporary marker to `0` as instructed.
 4. Remember current git global hook directory value (to restore it after test is completed)
 5. Set `tmp-git-global-hooks-?` as a new global hook directory.
 6. Important note! When any test is failed, or completed succussfully - restore original global hook value. 
@@ -322,6 +328,12 @@ Findings name the temporary `temp.patch` file. Original file paths and line numb
 
 
 ### Test11 - check exact cfcli-revision is used
+0. Before running this test, restore `.last_pull_timestamp` in the temporary global hooks directory
+   to the current Unix timestamp (seconds since the epoch), even if a previous test set it to `0`.
+   Ensure that `git config --global core.hooksPath` points to that temporary directory before writing the marker.
+   On Linux/macOS: `date +%s > "$(git config --global core.hooksPath)/.last_pull_timestamp"`.
+   This prevents automatic hook updates during this version-selection test. Do not modify the marker
+   in the original global hooks directory.
 1. Create new unique folder `REPO-X`
 2. Initialize it as git empty repository
 3. Create `.qubership/grand-report.json` file with content:
